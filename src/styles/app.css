@@ -929,3 +929,36 @@ html[data-theme='dark'] .logo-bg {
 .bar-b > span {
   background: var(--tertiary);
 }
+
+/* ---------- roster editor ---------- */
+.roster-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.roster-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.roster-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+}
+.roster-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.roster-input {
+  width: 76px;
+  min-height: 36px;
+  padding: 4px 8px;
+}
+.roster-add-btn {
+  min-height: 36px;
+  padding: 0 8px;
+}
