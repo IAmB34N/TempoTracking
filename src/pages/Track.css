@@ -1,0 +1,244 @@
+/* Tracking page: fixed header, hint, court (takes the rest) and the customizable dock.
+   Never scrolls; the court always gets whatever the header + dock leave over. */
+.track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ---------- header (reserved; never covered) ---------- */
+.track-header {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: calc(4px + var(--safe-top)) 10px 6px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 2;
+}
+.track-header-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.track-header-spacer {
+  flex: 1 1 auto;
+}
+.track-iconbtn {
+  flex: 0 0 auto;
+  width: 44px;
+  padding: 0;
+}
+.track-logo {
+  flex: 0 0 auto;
+}
+.track-set {
+  flex: 0 0 auto;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--primary);
+  padding: 0 4px;
+  white-space: nowrap;
+}
+.track-count {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding-left: 4px;
+  border-left: 1px solid var(--border);
+}
+.track-sides {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+}
+.track-side {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.track-side-a {
+  color: var(--team-a);
+  border-color: var(--team-a);
+  background: var(--team-a-soft);
+}
+.track-side-b {
+  color: var(--team-b);
+  border-color: var(--team-b);
+  background: var(--team-b-soft);
+  justify-content: flex-end;
+}
+.track-side-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+.track-side-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.track-side-pos {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+.track-sides-net {
+  flex: 0 0 auto;
+  width: 2px;
+  height: 20px;
+  border-radius: 2px;
+  background: var(--court-net);
+  opacity: 0.6;
+}
+
+/* ---------- body: hint + court, then the dock ---------- */
+.track-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 10px calc(10px + var(--safe-bottom));
+}
+.track-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.track-hint {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+}
+.track-hint-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.25;
+}
+.track-hint-active {
+  color: var(--text);
+}
+.track-hint-btn {
+  flex: 0 0 auto;
+}
+@media (max-width: 400px) {
+  .track-hint-btn .btn-label {
+    display: none;
+  }
+  .track-hint-btn {
+    width: 40px;
+    padding: 0;
+  }
+}
+.track-court {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+.track-court > .court-wrap {
+  flex: 1 1 auto;
+}
+
+/* ---------- dock ---------- */
+.track-dock {
+  flex: 0 0 auto;
+  max-height: 46%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.track-dock .dock-cell {
+  container-type: inline-size;
+}
+.track-dock .dock-cell > .btn {
+  gap: 6px;
+}
+/* Narrow cells: stack the icon above a smaller label, then drop the label entirely. */
+@container (max-width: 118px) {
+  .track-dock .dock-cell > .btn {
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 4px;
+  }
+  .track-dock .dock-cell > .btn .btn-label {
+    font-size: 0.66rem;
+    max-width: 100%;
+    line-height: 1.1;
+  }
+  .track-dock .dock-cell > .btn .btn-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+@container (max-width: 72px) {
+  .track-dock .dock-cell > .btn .btn-label {
+    display: none;
+  }
+}
+
+/* ---------- landscape: court left, dock right ---------- */
+@media (orientation: landscape) and (min-width: 700px) {
+  .track-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  .track-header-row {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .track-sides {
+    flex: 0 1 auto;
+    max-width: 55%;
+  }
+  .track-side {
+    flex: 0 1 auto;
+  }
+  .track-body {
+    flex-direction: row;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .track-dock {
+    flex: 0 0 clamp(260px, 32vw, 420px);
+    width: clamp(260px, 32vw, 420px);
+    max-height: none;
+    overflow-y: auto;
+  }
+}
