@@ -60,22 +60,27 @@
   line-height: 1.25;
 }
 .team-row-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
   margin-top: 2px;
   font-size: 0.85rem;
   color: var(--muted);
-  overflow-wrap: anywhere;
+  overflow: hidden; /* clips the separator of a segment that starts a wrapped line */
 }
 .team-row-sub strong {
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: 800;
 }
 .team-row-seg {
+  position: relative;
   white-space: nowrap;
 }
+/* Separator sits in the column gap before each following segment, so it wraps with it and is never orphaned at a line end. */
 .team-row-seg + .team-row-seg::before {
   content: '·';
-  margin: 0 5px;
-  white-space: normal;
+  position: absolute;
+  left: -9px;
 }
 .team-avatar {
   display: inline-flex;

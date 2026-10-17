@@ -133,7 +133,7 @@ test.describe('Tempo', () => {
     await expect(page).toHaveURL(/#\/teams\/[^/]+$/)
     await expect(page.getByTestId('team-game-row')).toHaveCount(2)
     // 100% → 50%: −50.0 pts
-    await expect(page.getByTestId('team-game-row').first()).toContainText('50.0')
+    await expect(page.getByTestId('team-game-row').first()).toContainText('−50.0 pts')
   })
 
   test('layout editor rejects overlapping drops and keeps the court/header reserved', async ({ page }) => {
@@ -152,6 +152,17 @@ test.describe('Tempo', () => {
     expect(JSON.stringify(after?.buttons ?? null)).toBe(JSON.stringify(before?.buttons ?? after?.buttons ?? null))
   })
 
+  test('enter in a team-name input moves on instead of starting the game', async ({ page }) => {
+    await page.goto('/#/new')
+    await page.getByTestId('team-name-0').fill('Hawks')
+    await page.getByTestId('team-name-1').fill('Eagles')
+    await page.getByTestId('team-name-1').press('Enter')
+    await expect(page).toHaveURL(/#\/new$/)
+    await expect(page.locator('#b-libero')).toBeFocused()
+    const state = await readState(page)
+    expect(state?.games ?? []).toHaveLength(0)
+  })
+
   test('previous games list resumes and deletes games', async ({ page }) => {
     await createGame(page, 'Hawks', 'Tigers')
     await page.goto('/#/games')
@@ -161,5 +172,61 @@ test.describe('Tempo', () => {
     await expect(page.getByTestId('game-item')).toHaveCount(0)
     const state = await readState(page)
     expect(state.games).toHaveLength(0)
+  })
+
+  test('toast Undo removes the play it names, double taps commit once and Escape leaves a draft alone', async ({ page }) => {
+    const id = await createGame(page)
+    await logKill(page)
+    // second set: same setter, out
+    await tapCourtTeamA(page, 0.3, 0.3)
+    await tapCourtTeamA(page, 0.4, 0.4)
+    await option(page, 'setter')
+    await option(page, '7')
+    await option(page, 'tempo')
+    await option(page, 'outside')
+    await option(page, '12')
+    await option(page, 'out')
+    await expect(page.getByTestId('flow-panel')).toBeHidden()
+    let state = await readState(page)
+    expect(state.games[0].plays.map((p: any) => p.result)).toEqual(['kill', 'out'])
+    const killId = state.games[0].plays[0].id
+
+    // Only one toast shows at a time (it must never cover the court); its Undo removes the play it
+    // names (the 'out') and leaves the earlier kill untouched.
+    await expect(page.locator('.toast')).toHaveCount(1)
+    await page.locator('.toast', { hasText: 'Out' }).locator('.toast-action').click()
+    state = await readState(page)
+    expect(state.games[0].plays).toHaveLength(1)
+    expect(state.games[0].plays[0]).toMatchObject({ result: 'kill' })
+    expect(state.games[0].plays[0].id).toBe(killId)
+
+    // a double tap on the final option commits one play and does not start a phantom draft
+    await tapCourtTeamA(page, 0.3, 0.3)
+    await tapCourtTeamA(page, 0.4, 0.4)
+    await option(page, 'setter')
+    await option(page, '7')
+    await option(page, 'tempo')
+    await option(page, 'outside')
+    await option(page, '12')
+    const kill = (await page.getByTestId('flow-option-kill').boundingBox())!
+    await page.mouse.dblclick(kill.x + kill.width / 2, kill.y + kill.height / 2)
+    await expect(page.getByTestId('flow-panel')).toBeHidden()
+    await expect(page.getByTestId('track-hint')).toHaveText('Tap where the ball was set from')
+    state = await readState(page)
+    expect(state.games[0].plays).toHaveLength(2)
+    expect(state.games[0].id).toBe(id)
+
+    // Escape closes a confirm dialog without discarding the court step in progress
+    await tapCourtTeamA(page, 0.3, 0.3)
+    await expect(page.getByTestId('track-hint')).toContainText('hit from')
+    await page.getByTestId('dock-undo').click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog')).toBeHidden()
+    await expect(page.getByTestId('track-hint')).toContainText('hit from')
+    await page.keyboard.press('Escape')
+    await expect(page.getByTestId('track-hint')).toHaveText('Tap where the ball was set from')
+    state = await readState(page)
+    expect(state.games[0].plays).toHaveLength(2)
   })
 })

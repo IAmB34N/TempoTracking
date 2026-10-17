@@ -54,6 +54,8 @@ export async function createGame(page: Page, nameA = 'Hawks', nameB = 'Tigers') 
 export async function tapCourtTeamA(page: Page, fx = 0.3, fy = 0.3) {
   const court = page.getByTestId('track-court').locator('svg')
   await expect(court).toBeVisible()
+  // The court ignores taps for a moment after a panel or dialog closes over it.
+  await expect(court).toHaveClass(/court-interactive/)
   const box = (await court.boundingBox())!
   await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy)
 }

@@ -66,11 +66,33 @@ function clamp(n: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, n))
 }
 
-/** Map a physical point to SVG units for the given orientation. */
-function toSvg(u: number, v: number, o: Orientation): { x: number; y: number } {
+/** SVG viewBox size for an orientation. */
+export function viewBoxSize(o: Orientation): { w: number; h: number } {
+  return o === 'horizontal' ? { w: L + 2 * M, h: W + 2 * M } : { w: W + 2 * M, h: L + 2 * M }
+}
+
+/**
+ * Map a physical point to SVG units for the given orientation. The vertical court is the
+ * horizontal one rotated 90° clockwise (left endline → top, top sideline → right), so a
+ * marker stays on the same physical sideline whichever way the court is drawn.
+ */
+export function toSvg(u: number, v: number, o: Orientation): { x: number; y: number } {
   const along = M + u * L
-  const across = M + v * W
-  return o === 'horizontal' ? { x: along, y: across } : { x: across, y: along }
+  return o === 'horizontal' ? { x: along, y: M + v * W } : { x: M + (1 - v) * W, y: along }
+}
+
+/** Inverse of toSvg: SVG units → physical (u, v), unclamped. */
+export function fromSvg(x: number, y: number, o: Orientation): { u: number; v: number } {
+  return o === 'horizontal' ? { u: (x - M) / L, v: (y - M) / W } : { u: (y - M) / L, v: 1 - (x - M) / W }
+}
+
+/** Team-name font size (SVG units) that keeps the label inside its half of the court. */
+export function nameFontSize(name: string, o: Orientation): number {
+  const base = o === 'horizontal' ? 110 : 90
+  const maxLen = (o === 'horizontal' ? L / 2 : W) - 2 * 60
+  // ~0.75 em per character for the heavy italic uppercase face with its letter-spacing.
+  const fit = maxLen / (Math.max(1, name.length) * 0.75)
+  return Math.max(36, Math.min(base, fit))
 }
 
 /** Describe a point in plain words for screen readers / summaries. */
@@ -118,8 +140,35 @@ export function Court({
   const wrapRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const o = useAutoOrientation(wrapRef, orientation)
-  const vbW = o === 'horizontal' ? L + 2 * M : W + 2 * M
-  const vbH = o === 'horizontal' ? W + 2 * M : L + 2 * M
+
+  // Keep keyboard focus across the question panel. When the court stops being interactive it
+  // loses its tabindex and the browser drops focus to <body>, sometimes at once (before any
+  // effect runs) and sometimes only when the panel focuses its first option. Note either
+  // case; once the court is interactive again and nothing else holds focus (the panel has
+  // unmounted), focus comes back to the court instead of being lost on <body>.
+  const refocus = useRef(false)
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const onFocusOut = (e: FocusEvent) => {
+      if (e.relatedTarget === null && !svg.hasAttribute('tabindex')) refocus.current = true
+    }
+    svg.addEventListener('focusout', onFocusOut)
+    return () => svg.removeEventListener('focusout', onFocusOut)
+  }, [])
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    if (!interactive) {
+      if (document.activeElement === svg) refocus.current = true
+      return
+    }
+    if (!refocus.current) return
+    refocus.current = false
+    const active = document.activeElement
+    if (!active || active === document.body) svg.focus({ preventScroll: true })
+  }, [interactive])
+  const { w: vbW, h: vbH } = viewBoxSize(o)
   const left = leftTeam(swapSides)
   const right = (1 - left) as TeamIndex
 
@@ -131,10 +180,9 @@ export function Court({
       const ctm = svg.getScreenCTM()
       if (!ctm) return
       const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse())
-      const along = o === 'horizontal' ? pt.x : pt.y
-      const across = o === 'horizontal' ? pt.y : pt.x
-      const u = clamp((along - M) / L, -COURT_MARGIN / COURT_LENGTH, 1 + COURT_MARGIN / COURT_LENGTH)
-      const v = clamp((across - M) / W, -COURT_MARGIN / COURT_WIDTH, 1 + COURT_MARGIN / COURT_WIDTH)
+      const raw = fromSvg(pt.x, pt.y, o)
+      const u = clamp(raw.u, -COURT_MARGIN / COURT_LENGTH, 1 + COURT_MARGIN / COURT_LENGTH)
+      const v = clamp(raw.v, -COURT_MARGIN / COURT_WIDTH, 1 + COURT_MARGIN / COURT_WIDTH)
       const team = lockTeam ?? teamAt(u, swapSides)
       onSelect(physicalToTeam(u, v, team, swapSides), team)
     },
@@ -160,8 +208,9 @@ export function Court({
       const step = e.shiftKey ? 0.02 : 0.06
       let { u, v } = c
       const horizontal = o === 'horizontal'
-      if (e.key === 'ArrowLeft') horizontal ? (u -= step) : (v -= step)
-      else if (e.key === 'ArrowRight') horizontal ? (u += step) : (v += step)
+      // Vertical is rotated clockwise: v = 0 is the viewer's right sideline.
+      if (e.key === 'ArrowLeft') horizontal ? (u -= step) : (v += step)
+      else if (e.key === 'ArrowRight') horizontal ? (u += step) : (v -= step)
       else if (e.key === 'ArrowUp') horizontal ? (v -= step) : (u -= step)
       else if (e.key === 'ArrowDown') horizontal ? (v += step) : (u += step)
       else return
@@ -213,6 +262,7 @@ export function Court({
         onKeyDown={onKeyDown}
         onBlur={() => setCursor(null)}
         data-orientation={o}
+        data-lock={lockTeam !== undefined ? '' : undefined}
       >
         <defs>
           <marker id="court-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -238,19 +288,19 @@ export function Court({
         {/* team names */}
         {o === 'horizontal' ? (
           <>
-            <text x={M + L / 4} y={M + W / 2} className={nameClass(left)} textAnchor="middle" dominantBaseline="middle">
+            <text x={M + L / 4} y={M + W / 2} className={nameClass(left)} fontSize={nameFontSize(nameAt('left'), o)} textAnchor="middle" dominantBaseline="middle">
               {nameAt('left')}
             </text>
-            <text x={M + (3 * L) / 4} y={M + W / 2} className={nameClass(right)} textAnchor="middle" dominantBaseline="middle">
+            <text x={M + (3 * L) / 4} y={M + W / 2} className={nameClass(right)} fontSize={nameFontSize(nameAt('right'), o)} textAnchor="middle" dominantBaseline="middle">
               {nameAt('right')}
             </text>
           </>
         ) : (
           <>
-            <text x={M + W / 2} y={M + L / 4} className={nameClass(left)} textAnchor="middle" dominantBaseline="middle">
+            <text x={M + W / 2} y={M + L / 4} className={nameClass(left)} fontSize={nameFontSize(nameAt('left'), o)} textAnchor="middle" dominantBaseline="middle">
               {nameAt('left')}
             </text>
-            <text x={M + W / 2} y={M + (3 * L) / 4} className={nameClass(right)} textAnchor="middle" dominantBaseline="middle">
+            <text x={M + W / 2} y={M + (3 * L) / 4} className={nameClass(right)} fontSize={nameFontSize(nameAt('right'), o)} textAnchor="middle" dominantBaseline="middle">
               {nameAt('right')}
             </text>
           </>

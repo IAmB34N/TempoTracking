@@ -6,6 +6,7 @@ import {
   autoPlace,
   canPlace,
   collides,
+  compactAround,
   defaultLayout,
   moveButton,
   resizeButton,
@@ -86,5 +87,40 @@ describe('layout', () => {
     expect(overlapsAny(repaired.buttons)).toBe(false)
     expect(repaired.buttons.every((b) => !b.visible || canPlace(repaired.buttons, b))).toBe(true)
     expect(validateLayout(undefined)).toEqual(defaultLayout())
+  })
+
+  it('validateLayout re-places hidden buttons that are out of the grid or over a visible one', () => {
+    const repaired = validateLayout({
+      scale: 'md',
+      buttons: [
+        { id: 'home', col: 40, row: -3, w: 3, h: 1, visible: false },
+        { id: 'setLog', col: 0, row: 0, w: 3, h: 1, visible: false }, // under newSet, listed first
+        { id: 'newSet', col: 0, row: 0, w: 3, h: 1, visible: true },
+        { id: 'stats', col: 6, row: 5, w: 2, h: 1, visible: false }, // fine where it is
+      ],
+    })
+    const home = repaired.buttons.find((b) => b.id === 'home')!
+    expect(home.visible).toBe(false)
+    expect(canPlace(repaired.buttons, home)).toBe(true)
+    expect(repaired.buttons.find((b) => b.id === 'newSet')).toMatchObject({ col: 0, row: 0, visible: true })
+    expect(canPlace(repaired.buttons, repaired.buttons.find((b) => b.id === 'setLog')!)).toBe(true)
+    expect(repaired.buttons.find((b) => b.id === 'stats')).toMatchObject({ col: 6, row: 5, visible: false })
+    expect(repaired.buttons.every((b) => canPlace(repaired.buttons, b))).toBe(true)
+  })
+
+  it('compactAround removes a button and slides its row-mates left into the gap', () => {
+    const l = defaultLayout()
+    const compact = compactAround(l, 'newSet')
+    expect(compact.buttons.find((b) => b.id === 'newSet')).toBeUndefined()
+    expect(compact.buttons.find((b) => b.id === 'setLog')).toMatchObject({ col: 0, row: 0 })
+    expect(compact.buttons.find((b) => b.id === 'stats')).toMatchObject({ col: 3, row: 0 })
+    expect(compact.buttons.find((b) => b.id === 'undo')).toMatchObject({ col: 6, row: 0 })
+    // other rows are untouched and the persisted layout is not mutated
+    expect(compact.buttons.find((b) => b.id === 'swapSides')).toMatchObject({ col: 0, row: 1 })
+    expect(overlapsAny(compact.buttons)).toBe(false)
+    expect(l.buttons.find((b) => b.id === 'setLog')).toMatchObject({ col: 3 })
+    // a hidden or missing button leaves everyone where they are
+    const hidden = setButtonVisible(l, 'newSet', false)
+    expect(compactAround(hidden, 'newSet').buttons.find((b) => b.id === 'setLog')).toMatchObject({ col: 3 })
   })
 })

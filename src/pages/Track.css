@@ -78,12 +78,12 @@
   font-weight: 700;
 }
 .track-side-a {
-  color: var(--team-a);
+  color: var(--team-a-text);
   border-color: var(--team-a);
   background: var(--team-a-soft);
 }
 .track-side-b {
-  color: var(--team-b);
+  color: var(--team-b-text);
   border-color: var(--team-b);
   background: var(--team-b-soft);
   justify-content: flex-end;
@@ -144,7 +144,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  /* As tall as the Back/Cancel buttons so the court does not shift when they appear. */
+  min-height: var(--tap);
 }
 .track-hint-text {
   flex: 1 1 auto;
@@ -160,13 +161,14 @@
 }
 .track-hint-btn {
   flex: 0 0 auto;
+  min-height: var(--tap);
 }
 @media (max-width: 400px) {
   .track-hint-btn .btn-label {
     display: none;
   }
   .track-hint-btn {
-    width: 40px;
+    width: var(--tap);
     padding: 0;
   }
 }
@@ -196,11 +198,17 @@
 }
 
 /* ---------- dock ---------- */
+/* Rows shrink (Track.tsx) before the dock is allowed to scroll; keep 46% in sync with DOCK_MAX_SHARE there. */
 .track-dock {
   flex: 0 0 auto;
   max-height: 46%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+/* Still too tall at the smallest row height: fade the bottom edge as a cue that it scrolls. */
+.track-dock-scrolls {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
 }
 .track-dock .dock-cell {
   container-type: inline-size;
@@ -208,7 +216,7 @@
 .track-dock .dock-cell > .btn {
   gap: 6px;
 }
-/* Narrow cells: stack the icon above a smaller label, then drop the label entirely. */
+/* Narrow cells: stack the icon above a smaller, wrapping label, then drop the label entirely. */
 @container (max-width: 118px) {
   .track-dock .dock-cell > .btn {
     flex-direction: column;
@@ -219,6 +227,9 @@
     font-size: 0.66rem;
     max-width: 100%;
     line-height: 1.1;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
   }
   .track-dock .dock-cell > .btn .btn-icon svg {
     width: 18px;
@@ -254,13 +265,26 @@
     gap: 12px;
     align-items: stretch;
   }
+  /* 300px keeps a 2-column cell at (300 + 6) / 12 * 2 - 6 = 45px, above the 44px tap minimum. */
   .track-dock {
-    flex: 0 0 clamp(260px, 32vw, 420px);
-    width: clamp(260px, 32vw, 420px);
+    flex: 0 0 clamp(300px, 32vw, 420px);
+    width: clamp(300px, 32vw, 420px);
     max-height: none;
     overflow-y: auto;
   }
   .track ~ .toast-region {
     bottom: calc(20px + var(--safe-bottom));
   }
+}
+
+/* ---------- inline toast slot (reserved strip above the court) ---------- */
+.track-toast-slot {
+  flex: 0 0 auto;
+  padding: 0 12px;
+}
+.track-toast-slot:empty {
+  display: none;
+}
+.track-toast-slot .toast-region-inline {
+  margin: 6px 0 0;
 }

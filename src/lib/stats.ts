@@ -15,22 +15,26 @@ export interface Line {
   sets: number
   kills: number
   errors: number
-  /** 0..1, null when there are no sets. */
+  /** Sets logged without a hit result (e.g. the "Hit result" step was off); they are not scored. */
+  noResult: number
+  /** kills ÷ scored sets (0..1), null when no set has a result. */
   settingPct: number | null
-  /** (kills − errors) ÷ sets, null when there are no sets. */
+  /** (kills − errors) ÷ scored sets, null when no set has a result. */
   efficiency: number | null
 }
 
 export interface Summary extends Line {
   byResult: Record<HitResult, number>
   byHeight: Record<SetHeight, Line>
+  /** Sets logged without a set height, so the height table still sums to `sets`. */
+  noHeight: Line
   bySetter: Record<string, Line>
   byHitter: Record<string, Line>
   bySetNumber: Record<number, Line>
 }
 
 export function emptyLine(): Line {
-  return { sets: 0, kills: 0, errors: 0, settingPct: null, efficiency: null }
+  return { sets: 0, kills: 0, errors: 0, noResult: 0, settingPct: null, efficiency: null }
 }
 
 export function isKill(play: Play): boolean {
@@ -45,16 +49,21 @@ export function lineOf(plays: readonly Play[]): Line {
   const sets = plays.length
   let kills = 0
   let errors = 0
+  let noResult = 0
   for (const p of plays) {
+    if (p.result === undefined) noResult++
     if (isKill(p)) kills++
     if (isError(p)) errors++
   }
+  // Only sets with a recorded result can be scored; the rest are reported separately.
+  const scored = sets - noResult
   return {
     sets,
     kills,
     errors,
-    settingPct: sets ? kills / sets : null,
-    efficiency: sets ? (kills - errors) / sets : null,
+    noResult,
+    settingPct: scored ? kills / scored : null,
+    efficiency: scored ? (kills - errors) / scored : null,
   }
 }
 
@@ -80,15 +89,18 @@ function groupBy<K extends string | number>(plays: readonly Play[], key: (p: Pla
   return out
 }
 
+const NO_HEIGHT = 'none'
+
 export function summarize(plays: readonly Play[]): Summary {
   const byResult = Object.fromEntries(HIT_RESULTS.map((r) => [r, 0])) as Record<HitResult, number>
-  for (const p of plays) if (p.result) byResult[p.result]++
-  const byHeightRaw = groupBy(plays, (p) => p.height ?? null)
+  for (const p of plays) if (p.result && p.result in byResult) byResult[p.result]++
+  const byHeightRaw = groupBy(plays, (p) => p.height ?? NO_HEIGHT)
   const byHeight = Object.fromEntries(SET_HEIGHTS.map((h) => [h, byHeightRaw[h] ?? emptyLine()])) as Record<SetHeight, Line>
   return {
     ...lineOf(plays),
     byResult,
     byHeight,
+    noHeight: byHeightRaw[NO_HEIGHT] ?? emptyLine(),
     bySetter: groupBy(plays, setterKey),
     byHitter: groupBy(plays, hitterKey),
     bySetNumber: groupBy(plays, (p) => p.setNumber),
@@ -131,7 +143,8 @@ export function teamGameSeries(games: readonly Game[], teamId: string): GameSeri
     let deltaPts: number | null = null
     let deltaRelPct: number | null = null
     if (prev && prev.summary.settingPct !== null && summary.settingPct !== null) {
-      deltaPts = (summary.settingPct - prev.summary.settingPct) * 100
+      // Points are the difference of the two values as displayed (0.1%), so the delta reconciles with them.
+      deltaPts = roundPct(summary.settingPct) - roundPct(prev.summary.settingPct)
       deltaRelPct = prev.summary.settingPct > 0 ? ((summary.settingPct - prev.summary.settingPct) / prev.summary.settingPct) * 100 : null
     }
     points.push({
@@ -158,12 +171,43 @@ export function teamAllPlays(games: readonly Game[], teamId: string): Play[] {
   return out
 }
 
+/** A 0..1 ratio as a percentage rounded to the precision formatPct displays (0.1), e.g. 0.3077 → 30.8. */
+export function roundPct(value: number, digits = 1): number {
+  const f = 10 ** digits
+  return Math.round(value * 100 * f) / f
+}
+
+/**
+ * Percentage shares (one decimal) of each count that add up to exactly 100.0, using largest-remainder
+ * rounding so a column of shares reconciles. All zeros when the counts sum to 0.
+ */
+export function sharesSummingTo100(counts: readonly number[]): number[] {
+  const total = counts.reduce((sum, c) => sum + c, 0)
+  if (total <= 0) return counts.map(() => 0)
+  const raw = counts.map((c) => (c / total) * 1000)
+  const tenths = raw.map(Math.floor)
+  let left = 1000 - tenths.reduce((sum, t) => sum + t, 0)
+  const order = raw.map((r, i) => ({ i, frac: r - Math.floor(r) })).sort((x, y) => y.frac - x.frac || x.i - y.i)
+  for (const { i } of order) {
+    if (left <= 0) break
+    tenths[i]! += 1
+    left--
+  }
+  return tenths.map((t) => t / 10)
+}
+
+/** Unicode minus (U+2212) so negatives read the same in every stat; never a signed zero. */
 export function formatPct(value: number | null, digits = 1): string {
-  return value === null ? '—' : `${(value * 100).toFixed(digits)}%`
+  if (value === null) return '—'
+  const s = (Math.abs(value) * 100).toFixed(digits)
+  const neg = value < 0 && Number(s) !== 0
+  return `${neg ? '−' : ''}${s}%`
 }
 
 export function formatSigned(value: number | null, digits = 1, suffix = ''): string {
   if (value === null) return '—'
-  const sign = value > 0 ? '+' : value < 0 ? '−' : ''
-  return `${sign}${Math.abs(value).toFixed(digits)}${suffix}`
+  // Round first so the sign agrees with the printed digits (no "+0.0" / "−0.0").
+  const r = Number(value.toFixed(digits))
+  const sign = r > 0 ? '+' : r < 0 ? '−' : ''
+  return `${sign}${Math.abs(r).toFixed(digits)}${suffix}`
 }

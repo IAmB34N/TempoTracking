@@ -77,12 +77,13 @@ function PlayView({ game, play }: { game: Game; play: Play }) {
     if (!ok) return
     deletePlay(game.id, play.id)
     toast.show('Set deleted', { tone: 'danger' })
-    navigate(routes.log(game.id))
+    // Replace so Back from the log does not return to the deleted set.
+    navigate(routes.log(game.id), { replace: true })
   }
 
   return (
     <div className="page">
-      <TopBar title="Set" back={routes.log(game.id)} subtitle={`Set ${play.setNumber} · ${teamName}`} />
+      <TopBar title="Set" backFallback={routes.log(game.id)} subtitle={`Set ${play.setNumber} · ${teamName}`} />
       <div className="page-content">
         <div className="play-court">
           <Court teamNames={teamNames} swapSides={game.swapSides} markers={markers} arrow ariaLabel={courtLabel} />

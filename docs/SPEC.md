@@ -17,7 +17,7 @@ Tempo is a volleyball **setting tracker**: it logs where each ball was set from,
 ## Color scheme (tokens.css)
 Palette: gray, black, orange, white, pink. White + gray are backgrounds, **orange is the main highlight**, **black is secondary**, **pink is tertiary**.
 
-Light theme (default): `--bg:#eef0f3` (gray) · `--surface:#ffffff` (white) · `--surface-2:#f6f7f9` · `--text:#121212` (black) · `--muted:#6b7280` · `--border:#d6d9de` · `--primary:#ff6a00` (orange) · `--primary-ink:#ffffff` · `--secondary:#121212` (black) · `--secondary-ink:#ffffff` · `--tertiary:#ff3d8a` (pink) · `--tertiary-ink:#ffffff` · `--court:#f4a261`-ish sand with white lines (court fill uses `--court-fill:#ffd7b5`, `--court-line:#ffffff`, `--court-out:#e3e6ea`).
+Light theme (default): `--bg:#eef0f3` (gray) · `--surface:#ffffff` (white) · `--surface-2:#f6f7f9` · `--text:#121212` (black) · `--muted:#6b7280` · `--border:#d6d9de` · `--primary:#ff6a00` (orange) · `--primary-ink:#121212` (black on orange: white fails WCAG AA at 2.9:1) · `--primary-text:#c24e00` (orange as *text* on light surfaces) · `--secondary:#121212` (black) · `--secondary-ink:#ffffff` · `--tertiary:#ff3d8a` (pink) · `--tertiary-ink:#121212` · `--tertiary-text:#d6175f` · `--muted:#5b6270` · `--court:#f4a261`-ish sand with white lines (court fill uses `--court-fill:#ffd7b5`, `--court-line:#ffffff`, `--court-out:#e3e6ea`).
 
 Dark theme (`html[data-theme="dark"]`): `--bg:#0f1012` · `--surface:#1a1b1e` · `--surface-2:#232428` · `--text:#f5f5f5` · `--muted:#a1a1aa` · `--border:#34363b` · `--primary:#ff7a1a` · `--secondary:#e9e9ea` (black flips to light gray so it stays the "contrast" color) · `--secondary-ink:#121212` · `--tertiary:#ff5c9d` · court fill `#5a3a22`, lines `#f5f5f5`, out `#2a2b2f`.
 

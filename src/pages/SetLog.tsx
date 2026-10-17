@@ -72,7 +72,7 @@ function SetLogView({ game }: { game: Game }) {
 
   return (
     <div className="page">
-      <TopBar title="Set Log" back={routes.game(game.id)} subtitle={`${a.name} vs ${b.name}`} />
+      <TopBar title="Set Log" backFallback={routes.game(game.id)} subtitle={`${a.name} vs ${b.name}`} />
       <div className="page-content">
         <div className="log-head">
           <span className="log-count" data-testid="log-count">

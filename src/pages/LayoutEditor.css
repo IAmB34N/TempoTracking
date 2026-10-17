@@ -44,7 +44,6 @@
   gap: 8px;
   min-height: 44px;
   padding: 6px 10px;
-  padding-right: 150px;
 }
 .layout-reserved-header .logo-wordmark {
   color: var(--text);
@@ -87,9 +86,13 @@
   text-overflow: ellipsis;
   pointer-events: none;
 }
+/* In the header strip the tag is a normal flex child after "Set 1", so it shrinks (ellipsis) instead of covering it. */
 .layout-reserved-header .layout-reserved-tag {
-  top: 50%;
-  transform: translateY(-50%);
+  position: static;
+  order: 10;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: 6px;
 }
 /* Short label in the narrow header strip on phones, full sentence elsewhere. */
 .layout-reserved-tag-short {
@@ -101,21 +104,6 @@
   }
   .layout-reserved-header .layout-reserved-tag-long {
     display: none;
-  }
-}
-@media (max-width: 420px) {
-  .layout-reserved-header {
-    padding-right: 10px;
-  }
-  .layout-reserved-header .layout-reserved-tag {
-    position: static;
-    transform: none;
-    order: 10;
-    flex: 0 1 auto;
-    margin-left: 6px;
-  }
-  .layout-preview-set {
-    margin-left: auto;
   }
 }
 
@@ -304,7 +292,6 @@
 }
 .layout-segmented button {
   flex: 1 1 0;
-  min-height: 40px;
 }
 .layout-size-help {
   margin-top: 10px;

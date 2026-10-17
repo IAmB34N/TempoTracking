@@ -8,7 +8,7 @@ import { Logo } from '../components/Logo'
 import { Button, TopBar, useConfirm, useToast, type ButtonVariant } from '../components/ui'
 import { applyAnswer, firstStep, isCourtStep, nextStep, numbersForStep, STEP_TITLES, type Draft, type Rosters, type StepAnswer, type StepId } from '../lib/flow'
 import { playSummary } from '../lib/labels'
-import { DOCK_BUTTON_LABELS, usedRows, type DockButton, type DockButtonId, type LayoutConfig } from '../lib/layout'
+import { compactAround, DOCK_BUTTON_LABELS, rowHeightPx, SCALE_ROW_PX, usedRows, type DockButton, type DockButtonId, type LayoutConfig } from '../lib/layout'
 import { navigate, routes } from '../lib/router'
 import type { Game, Play, TeamIndex } from '../lib/types'
 import { useStore } from '../state/store'
@@ -55,6 +55,14 @@ const DOCK_ICONS: Record<DockButtonId, ReactNode> = {
   editLayout: <IconLayout size={20} />,
 }
 
+/* Share of the body the dock may take in portrait; keep in sync with `.track-dock { max-height }` in Track.css. */
+const DOCK_MAX_SHARE = 0.46
+/* Grid gap between dock cells; keep in sync with `.dock { gap }` in app.css. */
+const DOCK_GAP_PX = 6
+/* The court stays non-interactive for this long after a panel or dialog closes over it, so the
+   second tap of a double tap on their buttons cannot start a phantom draft. */
+const COURT_REARM_MS = 400
+
 const DOCK_VARIANTS: Record<DockButtonId, ButtonVariant> = {
   newSet: 'primary',
   setLog: 'secondary',
@@ -95,6 +103,16 @@ function TrackView({ game }: { game: Game }) {
     reset()
   }, [stepsKey, rostersKey])
 
+  // Anything that closes a panel or dialog over the court disarms it briefly (see COURT_REARM_MS).
+  const [courtArmed, setCourtArmed] = useState(true)
+  const rearmTimer = useRef(0)
+  const disarmCourt = useCallback(() => {
+    setCourtArmed(false)
+    window.clearTimeout(rearmTimer.current)
+    rearmTimer.current = window.setTimeout(() => setCourtArmed(true), COURT_REARM_MS)
+  }, [])
+  useEffect(() => () => window.clearTimeout(rearmTimer.current), [])
+
   const commit = useCallback(
     (draft: Draft) => {
       if (draft.teamIndex === undefined) return
@@ -106,10 +124,12 @@ function TrackView({ game }: { game: Game }) {
       if (draft.hitter) fields.hitter = draft.hitter
       if (draft.result) fields.result = draft.result
       const play = store.addPlay(gameId, fields)
-      toast.show('Logged · ' + playSummary(play), { tone: 'success', duration: 3500, action: { label: 'Undo', onClick: () => store.undoPlay(gameId) } })
+      // Undo removes *this* play, not whatever is newest when the toast is finally tapped.
+      toast.show('Logged · ' + playSummary(play), { tone: 'success', duration: 3500, replace: true, action: { label: 'Undo', onClick: () => store.deletePlay(gameId, play.id) } })
       reset()
+      disarmCourt()
     },
-    [store, gameId, game.currentSet, toast, reset],
+    [store, gameId, game.currentSet, toast, reset, disarmCourt],
   )
 
   const answer = useCallback(
@@ -125,19 +145,24 @@ function TrackView({ game }: { game: Game }) {
     [current, settings, rosters, commit],
   )
 
-  const back = useCallback(() => setHistory((h) => (h.length > 1 ? h.slice(0, -1) : h)), [])
+  const back = useCallback(() => {
+    setHistory((h) => (h.length > 1 ? h.slice(0, -1) : h))
+    disarmCourt()
+  }, [disarmCourt])
   const cancel = useCallback(() => {
-    if (inProgress) reset()
-  }, [inProgress, reset])
+    if (!inProgress) return
+    reset()
+    disarmCourt()
+  }, [inProgress, reset, disarmCourt])
 
-  // Escape discards an in-progress draft.
+  // Escape discards an in-progress draft — unless a confirm dialog is open, in which case
+  // Escape belongs to the dialog and the draft stays as it is.
   useEffect(() => {
     if (!inProgress) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        cancel()
-      }
+      if (e.key !== 'Escape' || document.querySelector('[role="dialog"][aria-modal="true"]')) return
+      e.preventDefault()
+      cancel()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -166,46 +191,77 @@ function TrackView({ game }: { game: Game }) {
   // ----- dock -----
   const plays = game.plays
   const dockLayout = useMemo<LayoutConfig>(
-    () => (settings.showSetNumber ? settings.layout : { ...settings.layout, buttons: settings.layout.buttons.filter((b) => b.id !== 'newSet') }),
+    () => (settings.showSetNumber ? settings.layout : compactAround(settings.layout, 'newSet')),
     [settings.layout, settings.showSetNumber],
   )
   const dockRows = usedRows(dockLayout)
 
-  // Tell the (global) toast region how tall the dock is so toasts sit above it in portrait.
-  const dockRef = useRef<HTMLDivElement>(null)
+  // Room the dock may take: the whole body beside the court in landscape, a share of it below
+  // the court in portrait. Tall layouts shrink their rows (down to the small scale) to fit
+  // instead of scrolling; only when even that is too tall does the dock scroll.
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [dockRoom, setDockRoom] = useState<number | null>(null)
   useEffect(() => {
-    const el = dockRef.current
-    const root = document.documentElement
+    const el = bodyRef.current
     if (!el) return
-    const update = () => root.style.setProperty('--toast-bottom', `${Math.round(el.getBoundingClientRect().height) + 20}px`)
+    const update = () => {
+      const cs = getComputedStyle(el)
+      const inner = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+      setDockRoom(cs.flexDirection === 'row' ? inner : inner * DOCK_MAX_SHARE)
+    }
     update()
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
     ro?.observe(el)
-    return () => {
-      ro?.disconnect()
-      root.style.removeProperty('--toast-bottom')
-    }
+    return () => ro?.disconnect()
+  }, [])
+  const dockRowPx = useMemo(() => {
+    const full = rowHeightPx(dockLayout)
+    if (dockRoom === null) return full
+    const fit = Math.floor((dockRoom - (dockRows - 1) * DOCK_GAP_PX) / dockRows)
+    return Math.max(SCALE_ROW_PX.sm, Math.min(full, fit))
+  }, [dockLayout, dockRoom, dockRows])
+
+  // Toasts render inline in a reserved strip above the court (never over it or the dock).
+  const toastSlotRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    toast.setSlot(toastSlotRef.current)
+    return () => toast.setSlot(null)
+  }, [toast])
+
+  // Flag the dock when it still has to scroll so the fade at its edge shows there is more.
+  const dockRef = useRef<HTMLDivElement>(null)
+  const [dockScrolls, setDockScrolls] = useState(false)
+  useEffect(() => {
+    const el = dockRef.current
+    if (!el) return
+    const update = () => setDockScrolls(el.scrollHeight > el.clientHeight + 1)
+    update()
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
+    ro?.observe(el)
+    return () => ro?.disconnect()
   }, [])
 
   const onNewSet = async () => {
     const n = game.currentSet + 1
     const ok = await confirm({ title: `Start Set ${n}?`, message: `New sets will be logged under Set ${n}.`, confirmLabel: `Start Set ${n}` })
+    disarmCourt()
     if (!ok) return
     store.newSet(gameId)
     reset()
-    toast.show(`Set ${n} started`, { tone: 'success' })
+    toast.show(`Set ${n} started`, { tone: 'success', replace: true })
   }
   const onUndo = async () => {
     const last = plays[plays.length - 1]
     if (!last) return
     const ok = await confirm({ title: 'Remove the last set?', message: playSummary(last), confirmLabel: 'Remove', danger: true })
+    disarmCourt()
     if (!ok) return
     store.undoPlay(gameId)
-    toast.show('Last set removed', { tone: 'danger' })
+    toast.show('Last set removed', { tone: 'danger', replace: true })
   }
   const onSwap = () => {
     store.swapSides(gameId)
-    toast.show('Sides swapped')
+    toast.show('Sides swapped', { replace: true })
   }
 
   const dockActions: Record<DockButtonId, { onClick: () => void; disabled?: boolean }> = {
@@ -260,8 +316,9 @@ function TrackView({ game }: { game: Game }) {
         </div>
       </header>
 
-      <div className="track-body">
+      <div ref={bodyRef} className="track-body">
         <div className="track-main">
+          <div ref={toastSlotRef} className="track-toast-slot" data-testid="track-toast-slot" />
           <div className="track-hint" data-testid="track-hint" hidden={inlineStart}>
             {inProgress && courtStep && (
               <Button variant="outline" size="sm" className="track-hint-btn" icon={<IconBack size={18} />} aria-label="Back to the previous question" onClick={back}>
@@ -282,7 +339,7 @@ function TrackView({ game }: { game: Game }) {
               <Court
                 teamNames={teamNames}
                 swapSides={game.swapSides}
-                interactive={courtStep}
+                interactive={courtStep && courtArmed}
                 lockTeam={current.step === 'hitFrom' ? current.draft.teamIndex : undefined}
                 highlightTeam={current.step === 'hitFrom' ? current.draft.teamIndex : undefined}
                 markers={markers}
@@ -306,8 +363,8 @@ function TrackView({ game }: { game: Game }) {
             )}
           </div>
         </div>
-        <div ref={dockRef} className="track-dock" data-testid="track-dock">
-          <ButtonDock layout={dockLayout} rows={dockRows} renderButton={renderDockButton} className="track-dock-grid" />
+        <div ref={dockRef} className={['track-dock', dockScrolls ? 'track-dock-scrolls' : ''].filter(Boolean).join(' ')} data-testid="track-dock">
+          <ButtonDock layout={dockLayout} rows={dockRows} renderButton={renderDockButton} className="track-dock-grid" style={{ gridTemplateRows: `repeat(${dockRows}, ${dockRowPx}px)` }} />
         </div>
       </div>
 

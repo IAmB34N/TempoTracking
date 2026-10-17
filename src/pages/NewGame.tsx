@@ -1,15 +1,19 @@
-import { useId, useMemo, useState, type FormEvent } from 'react'
+import { useId, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { IconPlay, IconSwap } from '../components/Icons'
 import { RosterEditor } from '../components/RosterEditor'
 import { Button, TopBar, useToast } from '../components/ui'
 import { navigate, routes } from '../lib/router'
-import { emptyRoster, rosterSize, type Roster, type Team, type TeamIndex } from '../lib/types'
+import { POSITIONS, emptyRoster, rosterSize, type Roster, type Team, type TeamIndex } from '../lib/types'
 import { useStore, type NewGameTeamInput } from '../state/store'
 import './NewGame.css'
 
 export interface TeamForm {
   name: string
   roster: Roster
+  /** Saved team whose roster was loaded into this form, if any. */
+  sourceTeamId?: string
+  /** True once the user has changed the numbers in this form. */
+  rosterEdited: boolean
 }
 
 const SIDE = ['a', 'b'] as const
@@ -35,7 +39,10 @@ export function startBlocker(forms: readonly [TeamForm, TeamForm]): string | nul
 
 function initialForms(teams: readonly Team[]): [TeamForm, TeamForm] {
   const primary = teams.find((t) => t.isPrimary)
-  return [primary ? { name: primary.name, roster: primary.roster } : { name: '', roster: emptyRoster() }, { name: '', roster: emptyRoster() }]
+  return [
+    primary ? { name: primary.name, roster: primary.roster, sourceTeamId: primary.id, rosterEdited: false } : { name: '', roster: emptyRoster(), rosterEdited: false },
+    { name: '', roster: emptyRoster(), rosterEdited: false },
+  ]
 }
 
 export default function NewGame() {
@@ -55,24 +62,45 @@ export default function NewGame() {
 
   const onNameChange = (index: TeamIndex, name: string) => {
     const match = findTeamByName(state.teams, name)
-    // A matching saved team fills an empty roster automatically; a non-empty one needs confirmation.
-    if (match && rosterSize(forms[index].roster) === 0) update(index, { name, roster: match.roster })
+    const form = forms[index]
+    // A matching saved team fills the roster automatically when it is empty or was itself loaded
+    // (unchanged) from another saved team; a hand-edited roster needs confirmation instead.
+    const autoLoad = match && (rosterSize(form.roster) === 0 || (!form.rosterEdited && form.sourceTeamId !== match.id))
+    if (match && autoLoad) update(index, { name, roster: match.roster, sourceTeamId: match.id, rosterEdited: false })
     else update(index, { name })
   }
 
   const loadSaved = (index: TeamIndex, team: Team) => {
-    update(index, { name: team.name, roster: team.roster })
-    toast.show(`Loaded the ${team.name} roster.`)
+    update(index, { name: team.name, roster: team.roster, sourceTeamId: team.id, rosterEdited: false })
+    toast.show(`Loaded the ${team.name} roster.`, { replace: true })
   }
 
   const swap = () => setForms(([a, b]) => [b, a])
+
+  // Enter (the keyboard's "next" key) in a name input must not implicitly submit the form and start the game;
+  // move on to that team's first jersey-number field instead.
+  const onNameKeyDown = (side: (typeof SIDE)[number], e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    document.getElementById(`${side}-${POSITIONS[0]}`)?.focus()
+  }
 
   const blocker = startBlocker(forms)
 
   const start = (e?: FormEvent) => {
     e?.preventDefault()
     if (blocker) return
-    const toInput = (f: TeamForm): NewGameTeamInput => ({ name: f.name.trim(), roster: f.roster, teamId: findTeamByName(state.teams, f.name)?.id })
+    const toInput = (f: TeamForm): NewGameTeamInput => {
+      const saved = findTeamByName(state.teams, f.name)
+      return {
+        name: f.name.trim(),
+        roster: f.roster,
+        teamId: saved?.id,
+        // Only write the numbers back to the saved team when the user edited that team's own roster
+        // (or built one from scratch) — never when the numbers were loaded from a different team.
+        updateSavedRoster: f.rosterEdited && (f.sourceTeamId === undefined || f.sourceTeamId === saved?.id),
+      }
+    }
     const id = createGame(toInput(forms[0]), toInput(forms[1]))
     navigate(routes.game(id))
   }
@@ -83,7 +111,7 @@ export default function NewGame() {
         title="New Game"
         back="/"
         right={
-          <Button variant="ghost" size="sm" icon={<IconSwap size={18} />} onClick={swap} aria-label="Swap Team A and Team B">
+          <Button variant="ghost" size="sm" className="newgame-swap" icon={<IconSwap size={18} />} onClick={swap} aria-label="Swap Team A and Team B">
             Swap A ⇄ B
           </Button>
         }
@@ -128,6 +156,7 @@ export default function NewGame() {
                     maxLength={40}
                     enterKeyHint="next"
                     onChange={(e) => onNameChange(index, e.target.value)}
+                    onKeyDown={(e) => onNameKeyDown(side, e)}
                   />
                   {canLoad && match && (
                     <div className="newgame-load">
@@ -167,7 +196,7 @@ export default function NewGame() {
 
                 <div className="newgame-roster">
                   <h3 className="section-title">Jersey numbers</h3>
-                  <RosterEditor roster={form.roster} onChange={(roster) => update(index, { roster })} team={side} idPrefix={side} />
+                  <RosterEditor roster={form.roster} onChange={(roster) => update(index, { roster, rosterEdited: true })} team={side} idPrefix={side} />
                   {empty && (
                     <p className="small muted newgame-warning" role="note">
                       No numbers yet — number steps will be skipped for this team.

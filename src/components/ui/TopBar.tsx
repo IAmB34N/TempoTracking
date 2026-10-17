@@ -5,14 +5,16 @@ import { LogoMark } from '../Logo'
 
 export interface TopBarProps {
   title: ReactNode
-  /** Route to go back to; when omitted uses browser history with "/" as fallback. */
+  /** Route to go back to; when omitted uses browser history with `backFallback` ("/" by default) as fallback. */
   back?: string | false
+  /** Where history-based back lands when there is no history entry to pop (e.g. a cold deep link). */
+  backFallback?: string
   right?: ReactNode
   subtitle?: ReactNode
 }
 
-export function TopBar({ title, back, right, subtitle }: TopBarProps) {
-  const onBack = () => (typeof back === 'string' ? navigate(back) : goBack('/'))
+export function TopBar({ title, back, backFallback, right, subtitle }: TopBarProps) {
+  const onBack = () => (typeof back === 'string' ? navigate(back) : goBack(backFallback ?? '/'))
   return (
     <header className="topbar">
       {back !== false && (

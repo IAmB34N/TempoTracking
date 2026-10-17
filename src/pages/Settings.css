@@ -23,7 +23,6 @@
   align-self: flex-start;
 }
 .settings-segmented button {
-  min-height: 40px;
   min-width: 84px;
 }
 .settings-actions {

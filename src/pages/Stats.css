@@ -16,7 +16,6 @@
   flex-wrap: nowrap;
 }
 .stats-filter .segmented button {
-  min-height: 44px;
   white-space: nowrap;
 }
 .stats-note {

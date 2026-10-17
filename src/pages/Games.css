@@ -71,6 +71,18 @@
 .games-row-actions .games-delete {
   color: var(--danger);
 }
+/* 360px phones: three ~84px cells; tighten so "Delete" fits instead of ellipsizing. */
+@media (max-width: 379px) {
+  .games-row-actions {
+    gap: 6px;
+    padding: 0 10px;
+  }
+  .games-row-actions .btn {
+    gap: 4px;
+    padding: 0 4px;
+    font-size: 0.85rem;
+  }
+}
 .games-row-actions .games-delete:hover {
   border-color: var(--danger);
 }

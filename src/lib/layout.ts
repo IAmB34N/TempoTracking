@@ -151,33 +151,36 @@ export function validateLayout(raw: unknown): LayoutConfig {
   const placed: DockButton[] = []
   const pending: Omit<DockButton, 'col' | 'row'>[] = []
   const seen = new Set<DockButtonId>()
+  const candidates: DockButton[] = []
 
   for (const item of rawButtons) {
     if (!item || typeof item !== 'object') continue
     const b = item as Partial<DockButton>
     if (!isButtonId(b.id) || seen.has(b.id)) continue
     seen.add(b.id)
-    const candidate: DockButton = {
+    candidates.push({
       id: b.id,
       col: num(b.col, 0),
       row: num(b.row, 0),
       w: clamp(num(b.w, 3), MIN_W, MAX_W),
       h: clamp(num(b.h, 1), MIN_H, MAX_H),
       visible: b.visible !== false,
-    }
-    if (!candidate.visible) {
-      placed.push(candidate)
-    } else if (canPlace(placed, candidate)) {
-      placed.push(candidate)
-    } else {
-      pending.push(candidate)
-    }
+    })
+  }
+  // Visible buttons claim their cells first. Hidden ones must still sit inside the grid and
+  // off the visible ones: the editor renders them, and a re-shown button keeps its slot.
+  for (const candidate of [...candidates.filter((c) => c.visible), ...candidates.filter((c) => !c.visible)]) {
+    if (canPlace(placed, candidate)) placed.push(candidate)
+    else pending.push(candidate)
   }
   for (const def of fallback.buttons) {
     if (!seen.has(def.id)) pending.push({ id: def.id, w: def.w, h: def.h, visible: def.visible })
   }
-  for (const p of pending) {
-    const spot = autoPlace(placed, p) ?? autoPlace(placed, { ...p, visible: false })
+  // Visible buttons get the first free slots; hidden ones then take cells nothing else uses,
+  // so the editor never draws two buttons on top of each other.
+  for (const p of [...pending.filter((x) => x.visible), ...pending.filter((x) => !x.visible)]) {
+    const occupied = placed.map((b) => ({ ...b, visible: true }))
+    const spot = autoPlace(occupied, p) ?? autoPlace(occupied, { ...p, visible: false })
     if (spot) placed.push(spot)
     else placed.push({ id: p.id, col: 0, row: 0, w: MIN_W, h: MIN_H, visible: false })
   }
@@ -230,4 +233,24 @@ export function setButtonVisible(layout: LayoutConfig, id: DockButtonId, visible
 
 export function setScale(layout: LayoutConfig, scale: DockScale): LayoutConfig {
   return { ...layout, scale }
+}
+
+/**
+ * Drop a button from the layout and close the gap it leaves: visible buttons sharing its rows
+ * and sitting to its right slide left, one column at a time, as far as they can go without
+ * colliding. Used when a button is removed at render time (e.g. New Set with the set number
+ * hidden) so the persisted layout stays untouched.
+ */
+export function compactAround(layout: LayoutConfig, removedId: DockButtonId): LayoutConfig {
+  const removed = layout.buttons.find((b) => b.id === removedId)
+  const buttons = layout.buttons.filter((b) => b.id !== removedId)
+  if (!removed || !removed.visible) return { ...layout, buttons }
+  const sameRows = (b: DockButton) => b.row < removed.row + removed.h && removed.row < b.row + b.h
+  const movers = buttons.filter((b) => b.visible && b.col > removed.col && sameRows(b)).sort((a, b) => a.col - b.col)
+  for (const m of movers) {
+    let slid = m
+    while (slid.col > 0 && canPlace(buttons, { ...slid, col: slid.col - 1 })) slid = { ...slid, col: slid.col - 1 }
+    if (slid !== m) buttons.splice(buttons.indexOf(m), 1, slid)
+  }
+  return { ...layout, buttons }
 }

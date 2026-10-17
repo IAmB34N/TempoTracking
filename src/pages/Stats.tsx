@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button, TopBar } from '../components/ui'
 import { HEIGHT_LABELS, RESULT_LABELS } from '../lib/labels'
 import { navigate, routes } from '../lib/router'
-import { formatPct, setNumbersIn, summarize, teamPlays, type Line, type Summary } from '../lib/stats'
+import { formatPct, roundPct, setNumbersIn, sharesSummingTo100, summarize, teamPlays, type Line, type Summary } from '../lib/stats'
 import { HIT_RESULTS, SET_HEIGHTS, type Game, type TeamIndex } from '../lib/types'
 import { useStore } from '../state/store'
 import './Stats.css'
@@ -47,7 +47,7 @@ function StatsView({ game }: { game: Game }) {
 
   return (
     <div className="page">
-      <TopBar title="Stats" back={routes.game(game.id)} subtitle={subtitle} />
+      <TopBar title="Stats" backFallback={routes.game(game.id)} subtitle={subtitle} />
       <div className="page-content">
         <div className="stats-toolbar">
           <div className="stats-filter">
@@ -173,9 +173,12 @@ function h2hSentence(nameA: string, nameB: string, a: Summary, b: Summary): stri
   if (a.settingPct === null && b.settingPct === null) return 'No sets logged yet.'
   if (a.settingPct === null) return `Only ${nameB} has sets logged so far.`
   if (b.settingPct === null) return `Only ${nameA} has sets logged so far.`
-  const diff = Math.abs(a.settingPct - b.settingPct) * 100
+  // Compare the values as displayed (0.1 pt) so the lead always reconciles with the two rows above.
+  const ra = roundPct(a.settingPct)
+  const rb = roundPct(b.settingPct)
+  const diff = Math.abs(ra - rb)
   if (diff < 0.05) return `${nameA} and ${nameB} are level.`
-  const leader = a.settingPct > b.settingPct ? nameA : nameB
+  const leader = ra > rb ? nameA : nameB
   return `${leader} leads by ${diff.toFixed(1)} percentage points.`
 }
 
@@ -183,7 +186,9 @@ function BreakdownCard({ game, teamIndex, summary }: { game: Game; teamIndex: Te
   const headingId = `stats-breakdown-${teamIndex}`
   const setters = useMemo(() => sortedLines(summary.bySetter), [summary])
   const hitters = useMemo(() => sortedLines(summary.byHitter), [summary])
-  const totalSets = summary.sets
+  // Shares are reconciled so the visible column adds up (largest-remainder rounding). Sets without a
+  // result are counted as a trailing, unrendered bucket so the rows still read as "share of all sets".
+  const shares = useMemo(() => sharesSummingTo100([...HIT_RESULTS.map((r) => summary.byResult[r]), summary.noResult]), [summary])
   return (
     <section className={['card', teamIndex === 0 ? 'card-a' : 'card-b'].join(' ')} aria-labelledby={headingId}>
       <div className="card-title">
@@ -194,7 +199,10 @@ function BreakdownCard({ game, teamIndex, summary }: { game: Game; teamIndex: Te
         <LineTable
           title="By set height"
           rowLabel="Height"
-          rows={SET_HEIGHTS.map((h) => [HEIGHT_LABELS[h], summary.byHeight[h]] as const)}
+          rows={[
+            ...SET_HEIGHTS.map((h) => [HEIGHT_LABELS[h], summary.byHeight[h]] as const),
+            ...(summary.noHeight.sets > 0 ? [['No height recorded', summary.noHeight] as const] : []),
+          ]}
         />
         <LineTable title="By setter" rowLabel="Setter" rows={setters} />
         <LineTable title="By hitter" rowLabel="Hitter" rows={hitters} />
@@ -212,7 +220,7 @@ function BreakdownCard({ game, teamIndex, summary }: { game: Game; teamIndex: Te
                 </tr>
               </thead>
               <tbody>
-                {HIT_RESULTS.map((r) => {
+                {HIT_RESULTS.map((r, i) => {
                   const count = summary.byResult[r]
                   return (
                     <tr key={r} className={count === 0 ? 'is-zero' : undefined}>
@@ -220,10 +228,17 @@ function BreakdownCard({ game, teamIndex, summary }: { game: Game; teamIndex: Te
                         {RESULT_LABELS[r]}
                       </th>
                       <td>{count}</td>
-                      <td>{formatPct(totalSets ? count / totalSets : null)}</td>
+                      <td>{`${shares[i]!.toFixed(1)}%`}</td>
                     </tr>
                   )
                 })}
+                {summary.noResult > 0 && (
+                  <tr>
+                    <th scope="row">No result recorded</th>
+                    <td>{summary.noResult}</td>
+                    <td>{`${shares[HIT_RESULTS.length]!.toFixed(1)}%`}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

@@ -1,5 +1,20 @@
 import { normalizeSettings, type Settings } from './settings'
-import { normalizeRoster, type Game, type GameTeam, type Play, type Team, type TeamIndex } from './types'
+import {
+  ATTACK_POSITIONS,
+  HIT_RESULTS,
+  SETTER_KINDS,
+  SET_HEIGHTS,
+  normalizeRoster,
+  type AttackPosition,
+  type Game,
+  type GameTeam,
+  type HitResult,
+  type Play,
+  type SetHeight,
+  type SetterKind,
+  type Team,
+  type TeamIndex,
+} from './types'
 
 export const STORAGE_KEY = 'tempo.v1'
 
@@ -88,7 +103,7 @@ function normalizeGameTeam(raw: unknown): GameTeam | null {
   const r = raw as Record<string, unknown>
   const name = str(r.name)
   if (!name) return null
-  return { teamId: str(r.teamId) ?? name.toLowerCase(), name: name.trim(), roster: normalizeRoster(r.roster) }
+  return { teamId: str(r.teamId) ?? name.trim().toLowerCase(), name: name.trim(), roster: normalizeRoster(r.roster) }
 }
 
 function normalizeGame(raw: unknown): Game | null {
@@ -99,6 +114,8 @@ function normalizeGame(raw: unknown): Game | null {
   const a = normalizeGameTeam(r.teams[0])
   const b = normalizeGameTeam(r.teams[1])
   if (!a || !b) return null
+  // A team can't play itself: stats attribute exactly one side of a game to a team.
+  if (a.teamId === b.teamId) return null
   const createdAt = num(r.createdAt, Date.now())
   const plays = (Array.isArray(r.plays) ? r.plays : [])
     .map((p) => normalizePlay(p, id))
@@ -135,9 +152,42 @@ function normalizePlay(raw: unknown, gameId: string): Play | null {
   const hitFrom = pt(r.hitFrom)
   if (setFrom) play.setFrom = setFrom
   if (hitFrom) play.hitFrom = hitFrom
-  if (r.setter && typeof r.setter === 'object') play.setter = r.setter as Play['setter']
-  if (typeof r.height === 'string') play.height = r.height as Play['height']
-  if (r.hitter && typeof r.hitter === 'object') play.hitter = r.hitter as Play['hitter']
-  if (typeof r.result === 'string') play.result = r.result as Play['result']
+  const setter = normalizeSetter(r.setter)
+  const hitter = normalizeHitter(r.hitter)
+  if (setter) play.setter = setter
+  if (oneOf<SetHeight>(SET_HEIGHTS, r.height)) play.height = r.height
+  if (hitter) play.hitter = hitter
+  if (oneOf<HitResult>(HIT_RESULTS, r.result)) play.result = r.result
   return play
+}
+
+function oneOf<T extends string>(allowed: readonly T[], v: unknown): v is T {
+  return typeof v === 'string' && (allowed as readonly string[]).includes(v)
+}
+
+/** Jersey numbers may have been exported as numbers; anything else is dropped. */
+function jersey(v: unknown): string | undefined {
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v)
+  return typeof v === 'string' && v.trim() ? v.trim() : undefined
+}
+
+function normalizeSetter(raw: unknown): Play['setter'] | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  if (!oneOf<SetterKind>(SETTER_KINDS, r.kind)) return undefined
+  const setter: NonNullable<Play['setter']> = { kind: r.kind }
+  if (r.kind === 'other' && oneOf<AttackPosition>(ATTACK_POSITIONS, r.position)) setter.position = r.position
+  const number = jersey(r.number)
+  if (number) setter.number = number
+  return setter
+}
+
+function normalizeHitter(raw: unknown): Play['hitter'] | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  if (!oneOf<AttackPosition>(ATTACK_POSITIONS, r.position)) return undefined
+  const hitter: NonNullable<Play['hitter']> = { position: r.position }
+  const number = jersey(r.number)
+  if (number) hitter.number = number
+  return hitter
 }

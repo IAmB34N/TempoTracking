@@ -133,16 +133,16 @@ button {
   font-variant-numeric: tabular-nums;
 }
 .text-a {
-  color: var(--team-a);
+  color: var(--team-a-text);
 }
 .text-b {
-  color: var(--team-b);
+  color: var(--team-b-text);
 }
 .text-primary {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .text-tertiary {
-  color: var(--tertiary);
+  color: var(--tertiary-text);
 }
 
 /* ---------- top bar ---------- */
@@ -174,6 +174,11 @@ button {
 }
 .topbar-logo {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  border-radius: var(--radius-sm);
   line-height: 0;
 }
 .topbar-title-wrap {
@@ -277,7 +282,7 @@ html[data-theme='dark'] .logo-bg {
   text-overflow: ellipsis;
 }
 .btn-sm {
-  min-height: 36px;
+  min-height: var(--tap);
   padding: 0 12px;
   font-size: 0.9rem;
 }
@@ -431,14 +436,15 @@ html[data-theme='dark'] .logo-bg {
 .chip-a {
   background: var(--team-a-soft);
   border-color: var(--team-a);
-  color: var(--team-a);
+  color: var(--team-a-text);
 }
 .chip-b {
   background: var(--team-b-soft);
   border-color: var(--team-b);
-  color: var(--team-b);
+  color: var(--team-b-text);
 }
 .chip-remove {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -448,6 +454,12 @@ html[data-theme='dark'] .logo-bg {
   border-radius: 50%;
   background: transparent;
   color: inherit;
+}
+/* Keep the 22 px glyph but give it a 44 px hit area. */
+.chip-remove::before {
+  content: '';
+  position: absolute;
+  inset: -11px;
 }
 .chip-remove:hover {
   background: rgba(0, 0, 0, 0.1);
@@ -526,7 +538,7 @@ html[data-theme='dark'] .logo-bg {
   gap: 2px;
 }
 .segmented button {
-  min-height: 36px;
+  min-height: var(--tap);
   padding: 0 12px;
   border: 0;
   border-radius: 8px;
@@ -548,6 +560,12 @@ html[data-theme='dark'] .logo-bg {
   gap: 16px;
   min-height: 56px;
   padding: 10px 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.toggle-row.is-disabled {
+  cursor: default;
 }
 .toggle-row + .toggle-row {
   border-top: 1px solid var(--border);
@@ -572,6 +590,13 @@ html[data-theme='dark'] .logo-bg {
   border-radius: 999px;
   background: var(--border-strong);
   transition: background-color 150ms ease;
+  overflow: visible;
+}
+/* 52 × 32 visual, 60 × 44 hit area. */
+.toggle::before {
+  content: '';
+  position: absolute;
+  inset: -6px -4px;
 }
 .toggle.is-on {
   background: var(--primary);
@@ -615,8 +640,35 @@ html[data-theme='dark'] .logo-bg {
   color: var(--secondary-ink);
   box-shadow: var(--shadow-lg);
   font-weight: 600;
-  pointer-events: auto;
+  /* Taps fall through to whatever is underneath (the court); only the action button catches them. */
+  pointer-events: none;
   animation: toast-in 160ms ease-out;
+}
+/* Rendered inside a page-provided slot (reserved space, e.g. the tracking hint strip): one
+   compact row that never floats over anything. */
+.toast-region-inline {
+  position: static;
+  transform: none;
+  width: 100%;
+  flex-direction: row;
+  gap: 6px;
+}
+.toast-region-inline .toast {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 12px;
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+}
+.toast-region-inline .toast-message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toast-region-inline .toast-action {
+  min-height: 36px;
+  padding: 4px 12px;
 }
 .toast-success {
   border-left: 5px solid var(--primary);
@@ -635,6 +687,7 @@ html[data-theme='dark'] .logo-bg {
   background: var(--primary);
   color: var(--primary-ink);
   font-weight: 800;
+  pointer-events: auto;
 }
 @keyframes toast-in {
   from {
@@ -733,8 +786,15 @@ html[data-theme='dark'] .logo-bg {
 }
 .court-half-active {
   stroke: var(--text);
-  stroke-width: 10;
-  stroke-dasharray: 30 18;
+  stroke-width: 24;
+  stroke-dasharray: 48 24;
+}
+/* Hit-from step: the other half is locked out, so fade it. */
+.court-interactive[data-lock] .court-half:not(.court-half-active) {
+  opacity: 0.45;
+}
+.court-interactive[data-lock] .court-name:not(.court-half-active) {
+  opacity: 0.2;
 }
 .court-line {
   stroke: var(--court-line);
@@ -753,8 +813,8 @@ html[data-theme='dark'] .logo-bg {
   stroke-linecap: round;
 }
 .court-name {
+  /* font-size is set per name as an attribute so long names shrink to fit their half */
   font-family: var(--font-display);
-  font-size: 110px;
   font-weight: 900;
   font-style: italic;
   letter-spacing: 0.06em;
@@ -765,9 +825,6 @@ html[data-theme='dark'] .logo-bg {
   stroke: var(--surface);
   stroke-width: 10px;
   stroke-linejoin: round;
-}
-.court-vertical .court-name {
-  font-size: 90px;
 }
 .court-name.court-team-a {
   fill: var(--team-a);
@@ -922,7 +979,7 @@ html[data-theme='dark'] .logo-bg {
   border-color: var(--primary);
 }
 .stat-tile-primary .stat-value {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .delta-up {
   color: var(--success);
@@ -974,10 +1031,11 @@ html[data-theme='dark'] .logo-bg {
 }
 .roster-input {
   width: 76px;
-  min-height: 36px;
+  min-height: var(--tap);
   padding: 4px 8px;
 }
 .roster-add-btn {
-  min-height: 36px;
+  min-height: var(--tap);
+  min-width: var(--tap);
   padding: 0 8px;
 }

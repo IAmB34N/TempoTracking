@@ -3,7 +3,7 @@ import { newId } from '../lib/ids'
 import { defaultLayout, type LayoutConfig } from '../lib/layout'
 import { defaultSettings, normalizeSettings, type Settings } from '../lib/settings'
 import { loadState, prefersDark, saveState, type PersistedState } from '../lib/storage'
-import { normalizeRoster, type Game, type GameTeam, type Play, type Roster, type Team } from '../lib/types'
+import { POSITIONS, normalizeRoster, rosterSize, type Game, type GameTeam, type Play, type Roster, type Team } from '../lib/types'
 
 export interface AppState {
   games: Game[]
@@ -14,8 +14,51 @@ export interface AppState {
 export interface NewGameTeamInput {
   name: string
   roster: Roster
-  /** Existing saved team to link to (its name/roster get updated); otherwise matched by name. */
+  /** Existing saved team to link to (its name gets updated); otherwise matched by name. */
   teamId?: string
+  /**
+   * Whether `roster` should replace the saved team's roster. `false` keeps the saved roster
+   * (the form roster is still snapshotted into the game); `true` always replaces it. When
+   * omitted, a non-empty roster replaces the saved one and an empty roster leaves it alone,
+   * so clearing the chips for one game never wipes a team.
+   */
+  updateSavedRoster?: boolean
+}
+
+/**
+ * Pure part of createGame: resolves both inputs against the saved teams and builds the new
+ * Game plus the Team records to upsert (new teams, or existing ones with name/roster changes).
+ */
+export function planNewGame(current: readonly Team[], a: NewGameTeamInput, b: NewGameTeamInput, now = Date.now()): { game: Game; teams: Team[] } {
+  const teams: Team[] = []
+  const resolve = (input: NewGameTeamInput): GameTeam => {
+    const name = input.name.trim()
+    const roster = normalizeRoster(input.roster)
+    const existing =
+      (input.teamId && current.find((t) => t.id === input.teamId)) ||
+      current.find((t) => t.name.toLowerCase() === name.toLowerCase()) ||
+      teams.find((t) => t.name.toLowerCase() === name.toLowerCase())
+    let team: Team
+    if (existing) {
+      const replace = input.updateSavedRoster ?? rosterSize(roster) > 0
+      const savedRoster = replace ? roster : existing.roster
+      const changed = existing.name !== name || !sameRoster(existing.roster, savedRoster)
+      team = changed ? { ...existing, name, roster: savedRoster, updatedAt: now } : existing
+    } else {
+      team = { id: newId('t_'), name, roster, isPrimary: false, createdAt: now, updatedAt: now }
+    }
+    if (!teams.some((t) => t.id === team.id)) teams.push(team)
+    // The game keeps the roster the coach set up for it, whatever the saved team holds.
+    return { teamId: team.id, name: team.name, roster }
+  }
+  const ta = resolve(a)
+  const tb = resolve(b)
+  const game: Game = { id: newId('g_'), createdAt: now, updatedAt: now, teams: [ta, tb], currentSet: 1, swapSides: false, plays: [] }
+  return { game, teams }
+}
+
+function sameRoster(x: Roster, y: Roster): boolean {
+  return POSITIONS.every((p) => x[p].length === y[p].length && x[p].every((n, i) => n === y[p][i]))
 }
 
 type Action =
@@ -128,7 +171,7 @@ const StoreContext = createContext<StoreApi | null>(null)
 export function StoreProvider({ children, initial }: { children: ReactNode; initial?: AppState }) {
   const [state, dispatch] = useReducer(reducer, undefined, () => initial ?? initialState())
 
-  // Persist (debounced) on every change.
+  // Persist (debounced) on every change: a burst of dispatches produces one write.
   const timer = useRef<number | null>(null)
   const latest = useRef(state)
   latest.current = state
@@ -138,13 +181,14 @@ export function StoreProvider({ children, initial }: { children: ReactNode; init
       timer.current = null
       saveState({ version: 1, ...latest.current })
     }, 150)
-    // Flush immediately if the tab is hidden or closed before the debounce fires.
+  }, [state])
+  // Flush a pending write if the tab is hidden, closed or the store unmounts before it fires.
+  useEffect(() => {
     const flush = () => {
-      if (timer.current !== null) {
-        window.clearTimeout(timer.current)
-        timer.current = null
-        saveState({ version: 1, ...latest.current })
-      }
+      if (timer.current === null) return
+      window.clearTimeout(timer.current)
+      timer.current = null
+      saveState({ version: 1, ...latest.current })
     }
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') flush()
@@ -156,7 +200,7 @@ export function StoreProvider({ children, initial }: { children: ReactNode; init
       window.removeEventListener('pagehide', flush)
       flush()
     }
-  }, [state])
+  }, [])
 
   // Apply the theme.
   useEffect(() => {
@@ -165,32 +209,11 @@ export function StoreProvider({ children, initial }: { children: ReactNode; init
     if (meta) meta.setAttribute('content', state.settings.darkMode ? '#0f1012' : '#ff6a00')
   }, [state.settings.darkMode])
 
-  const createGame = useCallback(
-    (a: NewGameTeamInput, b: NewGameTeamInput): string => {
-      const now = Date.now()
-      const teams: Team[] = []
-      const current = latest.current.teams
-      const resolve = (input: NewGameTeamInput): GameTeam => {
-        const name = input.name.trim()
-        const roster = normalizeRoster(input.roster)
-        const existing =
-          (input.teamId && current.find((t) => t.id === input.teamId)) ||
-          current.find((t) => t.name.toLowerCase() === name.toLowerCase()) ||
-          teams.find((t) => t.name.toLowerCase() === name.toLowerCase())
-        const team: Team = existing
-          ? { ...existing, name, roster, updatedAt: now }
-          : { id: newId('t_'), name, roster, isPrimary: false, createdAt: now, updatedAt: now }
-        if (!teams.some((t) => t.id === team.id)) teams.push(team)
-        return { teamId: team.id, name: team.name, roster: team.roster }
-      }
-      const ta = resolve(a)
-      const tb = resolve(b)
-      const game: Game = { id: newId('g_'), createdAt: now, updatedAt: now, teams: [ta, tb], currentSet: 1, swapSides: false, plays: [] }
-      dispatch({ type: 'createGame', game, teams })
-      return game.id
-    },
-    [],
-  )
+  const createGame = useCallback((a: NewGameTeamInput, b: NewGameTeamInput): string => {
+    const { game, teams } = planNewGame(latest.current.teams, a, b)
+    dispatch({ type: 'createGame', game, teams })
+    return game.id
+  }, [])
 
   const addPlay = useCallback((gameId: string, play: Omit<Play, 'id' | 'gameId' | 'createdAt'>): Play => {
     const full: Play = { ...play, id: newId('p_'), gameId, createdAt: Date.now() }

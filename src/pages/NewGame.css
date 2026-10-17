@@ -79,3 +79,21 @@
   margin: 0;
   min-height: 1.2em;
 }
+/* Landscape phones: a sticky panel plus the top bar would leave the roster editor ~220px to scroll in. */
+@media (orientation: landscape) and (max-height: 480px) {
+  .newgame-start {
+    position: static;
+    box-shadow: var(--shadow);
+  }
+}
+
+/* Narrow phones: the swap button is icon-only so the title keeps its room (aria-label carries the text). */
+@media (max-width: 400px) {
+  .newgame-swap .btn-label {
+    display: none;
+  }
+  .newgame-swap {
+    width: var(--tap);
+    padding: 0;
+  }
+}

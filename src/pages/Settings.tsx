@@ -96,7 +96,7 @@ export default function Settings() {
       <div className="page-content">
         <section className="card" aria-labelledby="settings-steps-title">
           <div className="card-title">
-            <h2 id="settings-steps-title">Tracking steps</h2>
+            <h2 id="settings-steps-title" className="section-title">Tracking steps</h2>
           </div>
           <p className="muted small settings-help">Disabled steps are skipped while tracking.</p>
           {!settings.steps.setLocation && (
@@ -121,7 +121,7 @@ export default function Settings() {
 
         <section className="card" aria-labelledby="settings-appearance-title">
           <div className="card-title">
-            <h2 id="settings-appearance-title">Appearance</h2>
+            <h2 id="settings-appearance-title" className="section-title">Appearance</h2>
           </div>
           <div data-testid="settings-dark">
             <Toggle
@@ -136,7 +136,7 @@ export default function Settings() {
 
         <section className="card" aria-labelledby="settings-sets-title">
           <div className="card-title">
-            <h2 id="settings-sets-title">Sets</h2>
+            <h2 id="settings-sets-title" className="section-title">Sets</h2>
           </div>
           <div data-testid="settings-show-set">
             <Toggle
@@ -151,7 +151,7 @@ export default function Settings() {
 
         <section className="card" aria-labelledby="settings-buttons-title">
           <div className="card-title">
-            <h2 id="settings-buttons-title">Buttons</h2>
+            <h2 id="settings-buttons-title" className="section-title">Buttons</h2>
           </div>
           <div className="stack">
             <div className="settings-field">
@@ -186,7 +186,7 @@ export default function Settings() {
 
         <section className="card" aria-labelledby="settings-data-title">
           <div className="card-title">
-            <h2 id="settings-data-title">Data</h2>
+            <h2 id="settings-data-title" className="section-title">Data</h2>
           </div>
           <div className="stack">
             <p className="muted small">Everything is stored on this device. Export a backup or move your data to another phone.</p>

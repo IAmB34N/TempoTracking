@@ -385,7 +385,7 @@ export default function LayoutEditor() {
             <section className="card layout-inspector" aria-labelledby="layout-inspector-title" data-testid="layout-inspector">
               <div className="card-title">
                 <div>
-                  <h2 id="layout-inspector-title">{DOCK_BUTTON_LABELS[selectedButton.id]}</h2>
+                  <h2 id="layout-inspector-title" className="section-title">{DOCK_BUTTON_LABELS[selectedButton.id]}</h2>
                   <div className="muted small mono">
                     Column {selectedButton.col + 1}, row {selectedButton.row + 1}
                   </div>
@@ -433,7 +433,7 @@ export default function LayoutEditor() {
 
           <section className="card" aria-labelledby="layout-size-title">
             <div className="card-title">
-              <h2 id="layout-size-title">Button size</h2>
+              <h2 id="layout-size-title" className="section-title">Button size</h2>
             </div>
             <div className="segmented layout-segmented" role="group" aria-labelledby="layout-size-title">
               {SCALES.map((s) => (
