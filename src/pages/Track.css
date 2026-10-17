@@ -136,6 +136,11 @@
 }
 .track-hint {
   flex: 0 0 auto;
+}
+.track-hint[hidden] {
+  display: none;
+}
+.track-hint:not([hidden]) {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -172,8 +177,27 @@
   min-width: 0;
   display: flex;
 }
-.track-court > .court-wrap {
+.track-court-inner {
   flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+.track-court-inner > .court-wrap {
+  flex: 1 1 auto;
+}
+/* Chrome draws a UA outline on a focused <svg tabindex>; keep it for keyboard focus only. */
+.track-court .court:focus:not(:focus-visible) {
+  outline: none;
+}
+.track-court .court:focus-visible {
+  outline-offset: -3px;
+  border-radius: 12px;
+}
+
+/* Lift toasts above the dock so "Logged · …" never hides the buttons (portrait). */
+.track ~ .toast-region {
+  bottom: calc(var(--track-toast-offset, 20px) + var(--safe-bottom));
 }
 
 /* ---------- dock ---------- */
@@ -206,7 +230,7 @@
     height: 18px;
   }
 }
-@container (max-width: 72px) {
+@container (max-width: 60px) {
   .track-dock .dock-cell > .btn .btn-label {
     display: none;
   }
@@ -240,5 +264,8 @@
     width: clamp(260px, 32vw, 420px);
     max-height: none;
     overflow-y: auto;
+  }
+  .track ~ .toast-region {
+    bottom: calc(20px + var(--safe-bottom));
   }
 }

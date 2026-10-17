@@ -171,6 +171,22 @@ function TrackView({ game }: { game: Game }) {
   )
   const dockRows = usedRows(dockLayout)
 
+  // Tell the (global) toast region how tall the dock is so toasts sit above it in portrait.
+  const dockRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = dockRef.current
+    const root = document.documentElement
+    if (!el) return
+    const update = () => root.style.setProperty('--track-toast-offset', `${Math.round(el.getBoundingClientRect().height) + 20}px`)
+    update()
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
+    ro?.observe(el)
+    return () => {
+      ro?.disconnect()
+      root.style.removeProperty('--track-toast-offset')
+    }
+  }, [])
+
   const onNewSet = async () => {
     const n = game.currentSet + 1
     const ok = await confirm({ title: `Start Set ${n}?`, message: `New sets will be logged under Set ${n}.`, confirmLabel: `Start Set ${n}` })
@@ -246,7 +262,7 @@ function TrackView({ game }: { game: Game }) {
 
       <div className="track-body">
         <div className="track-main">
-          <div className="track-hint" data-testid="track-hint">
+          <div className="track-hint" data-testid="track-hint" hidden={inlineStart}>
             {inProgress && courtStep && (
               <Button variant="outline" size="sm" className="track-hint-btn" icon={<IconBack size={18} />} aria-label="Back to the previous question" onClick={back}>
                 Back
@@ -261,17 +277,19 @@ function TrackView({ game }: { game: Game }) {
               </Button>
             )}
           </div>
-          <div ref={courtRef} className="track-court" data-testid="track-court" aria-hidden={inlineStart || undefined}>
-            <Court
-              teamNames={teamNames}
-              swapSides={game.swapSides}
-              interactive={courtStep}
-              lockTeam={current.step === 'hitFrom' ? current.draft.teamIndex : undefined}
-              highlightTeam={current.step === 'hitFrom' ? current.draft.teamIndex : undefined}
-              markers={markers}
-              onSelect={onCourtSelect}
-              ariaLabel={courtStep ? `${STEP_TITLES[current.step]}. ${teamNames[left]} on the ${sideWord('left').toLowerCase()}, ${teamNames[right]} on the ${sideWord('right').toLowerCase()}.` : undefined}
-            />
+          <div ref={courtRef} className="track-court" data-testid="track-court">
+            <div className="track-court-inner" aria-hidden={inlineStart || undefined}>
+              <Court
+                teamNames={teamNames}
+                swapSides={game.swapSides}
+                interactive={courtStep}
+                lockTeam={current.step === 'hitFrom' ? current.draft.teamIndex : undefined}
+                highlightTeam={current.step === 'hitFrom' ? current.draft.teamIndex : undefined}
+                markers={markers}
+                onSelect={onCourtSelect}
+                ariaLabel={courtStep ? `${STEP_TITLES[current.step]}. ${teamNames[left]} on the ${sideWord('left').toLowerCase()}, ${teamNames[right]} on the ${sideWord('right').toLowerCase()}.` : undefined}
+              />
+            </div>
             {inlineStart && (
               <FlowPanel
                 inline
@@ -279,7 +297,7 @@ function TrackView({ game }: { game: Game }) {
                 draft={current.draft}
                 teamNames={teamNames}
                 numbers={numbersForStep(current.step, current.draft, rosters)}
-                breadcrumb={breadcrumbFor(current.draft, { setNumber: game.currentSet, showSetNumber: settings.showSetNumber })}
+                breadcrumb={[]}
                 canBack={false}
                 onAnswer={answer}
                 onBack={back}
@@ -288,7 +306,7 @@ function TrackView({ game }: { game: Game }) {
             )}
           </div>
         </div>
-        <div className="track-dock" data-testid="track-dock">
+        <div ref={dockRef} className="track-dock" data-testid="track-dock">
           <ButtonDock layout={dockLayout} rows={dockRows} renderButton={renderDockButton} className="track-dock-grid" />
         </div>
       </div>

@@ -123,6 +123,22 @@
 .stats-table tbody tr:last-child th {
   border-bottom: 0;
 }
+.stats-table th:first-child,
+.stats-table td:first-child {
+  white-space: normal;
+  width: 100%;
+}
+@media (max-width: 419px) {
+  .stats-table th,
+  .stats-table td {
+    padding: 8px 5px;
+    font-size: 0.9rem;
+  }
+  .stats-table thead th {
+    font-size: 0.64rem;
+    letter-spacing: 0.03em;
+  }
+}
 .stats-table tbody th {
   font-weight: 600;
   font-size: inherit;

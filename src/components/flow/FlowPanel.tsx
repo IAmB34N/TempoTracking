@@ -36,10 +36,11 @@ export function FlowPanel({ step, draft, teamNames, numbers, breadcrumb, canBack
   // Move focus into the panel on every step so keyboard and screen-reader users follow along.
   useEffect(() => {
     const root = rootRef.current
-    if (!root) return
+    // The inline start state is the page's resting state: never steal focus there.
+    if (!root || inline) return
     const first = root.querySelector<HTMLElement>('[data-autofocus="true"]') ?? root.querySelector<HTMLElement>('.options .btn')
     first?.focus({ preventScroll: true })
-  }, [step])
+  }, [step, inline])
 
   const team = draft.teamIndex
   const crumbs = joinBreadcrumb(breadcrumb)
