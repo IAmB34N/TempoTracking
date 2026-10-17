@@ -18,6 +18,30 @@ It is an installable progressive web app: it runs on phones, tablets and laptops
 
 Colours: gray & white backgrounds, **orange** highlights, **black** secondary, **pink** tertiary. Team A is always orange, Team B pink.
 
+## Run it on your phone
+
+**Hosted (recommended).** Every push to `master` builds the app and publishes it to GitHub Pages via `.github/workflows/deploy.yml`. Open the site on your phone:
+
+```
+https://iamb34n.github.io/TempoTracking/
+```
+
+Then install it so it opens full-screen like an app and works offline:
+
+- **iPhone (Safari):** tap the Share button → **Add to Home Screen** → Add.
+- **Android (Chrome):** tap the ⋮ menu → **Add to Home screen** (or **Install app**).
+
+The first time, the workflow turns Pages on for the repository automatically. If the site is not up a few minutes after the workflow finishes, open the repository's **Settings → Pages** and set the source to **GitHub Actions**.
+
+**On your own Wi-Fi (for quick testing).** On a computer on the same network:
+
+```bash
+npm install
+npm run dev -- --host
+```
+
+Vite prints a `Network:` address such as `http://192.168.1.20:5173/`; open that on your phone. Data is stored in the phone's browser, so it stays there between visits.
+
 ## Develop
 
 ```bash
