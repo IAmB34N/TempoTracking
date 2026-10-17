@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import type { CourtPoint, TeamIndex } from '../lib/types'
 
 /*
@@ -142,7 +142,39 @@ export function Court({
   )
 
   const nameAt = (side: 'left' | 'right') => teamNames[side === 'left' ? left : right]
+
+  // Keyboard placement: arrow keys move a cursor, Enter/Space places the point.
+  const [cursor, setCursor] = useState<{ u: number; v: number } | null>(null)
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent<SVGSVGElement>) => {
+      if (!interactive || !onSelect) return
+      const startU = lockTeam === undefined ? 0.25 : leftTeam(swapSides) === lockTeam ? 0.25 : 0.75
+      const c = cursor ?? { u: startU, v: 0.5 }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        const team = lockTeam ?? teamAt(c.u, swapSides)
+        setCursor(c)
+        onSelect(physicalToTeam(c.u, c.v, team, swapSides), team)
+        return
+      }
+      const step = e.shiftKey ? 0.02 : 0.06
+      let { u, v } = c
+      const horizontal = o === 'horizontal'
+      if (e.key === 'ArrowLeft') horizontal ? (u -= step) : (v -= step)
+      else if (e.key === 'ArrowRight') horizontal ? (u += step) : (v += step)
+      else if (e.key === 'ArrowUp') horizontal ? (v -= step) : (u -= step)
+      else if (e.key === 'ArrowDown') horizontal ? (v += step) : (u += step)
+      else return
+      e.preventDefault()
+      setCursor({
+        u: clamp(u, -COURT_MARGIN / COURT_LENGTH, 1 + COURT_MARGIN / COURT_LENGTH),
+        v: clamp(v, -COURT_MARGIN / COURT_WIDTH, 1 + COURT_MARGIN / COURT_WIDTH),
+      })
+    },
+    [interactive, onSelect, cursor, lockTeam, swapSides, o],
+  )
   const teamClass = (t: TeamIndex) => (t === 0 ? 'court-team-a' : 'court-team-b')
+  const nameClass = (t: TeamIndex) => ['court-name', teamClass(t), markers.length ? 'court-name-dim' : ''].filter(Boolean).join(' ')
   const halfHighlighted = (t: TeamIndex) => (highlightTeam ?? lockTeam) === t
 
   // Half rectangles in SVG units.
@@ -175,7 +207,11 @@ export function Court({
         role={interactive ? 'button' : 'img'}
         aria-label={ariaLabel ?? `Volleyball court. ${teamNames[left]} on the ${o === 'horizontal' ? 'left' : 'top'}, ${teamNames[right]} on the ${o === 'horizontal' ? 'right' : 'bottom'}.`}
         tabIndex={interactive ? 0 : undefined}
+        aria-keyshortcuts={interactive ? 'ArrowUp ArrowDown ArrowLeft ArrowRight Enter' : undefined}
+        aria-description={interactive ? 'Tap the court, or use the arrow keys to move the marker and Enter to place it.' : undefined}
         onPointerUp={handlePointer}
+        onKeyDown={onKeyDown}
+        onBlur={() => setCursor(null)}
         data-orientation={o}
       >
         <defs>
@@ -202,19 +238,19 @@ export function Court({
         {/* team names */}
         {o === 'horizontal' ? (
           <>
-            <text x={M + L / 4} y={M + W / 2} className={['court-name', teamClass(left)].join(' ')} textAnchor="middle" dominantBaseline="middle">
+            <text x={M + L / 4} y={M + W / 2} className={nameClass(left)} textAnchor="middle" dominantBaseline="middle">
               {nameAt('left')}
             </text>
-            <text x={M + (3 * L) / 4} y={M + W / 2} className={['court-name', teamClass(right)].join(' ')} textAnchor="middle" dominantBaseline="middle">
+            <text x={M + (3 * L) / 4} y={M + W / 2} className={nameClass(right)} textAnchor="middle" dominantBaseline="middle">
               {nameAt('right')}
             </text>
           </>
         ) : (
           <>
-            <text x={M + W / 2} y={M + L / 4} className={['court-name', teamClass(left)].join(' ')} textAnchor="middle" dominantBaseline="middle">
+            <text x={M + W / 2} y={M + L / 4} className={nameClass(left)} textAnchor="middle" dominantBaseline="middle">
               {nameAt('left')}
             </text>
-            <text x={M + W / 2} y={M + (3 * L) / 4} className={['court-name', teamClass(right)].join(' ')} textAnchor="middle" dominantBaseline="middle">
+            <text x={M + W / 2} y={M + (3 * L) / 4} className={nameClass(right)} textAnchor="middle" dominantBaseline="middle">
               {nameAt('right')}
             </text>
           </>
@@ -230,6 +266,17 @@ export function Court({
             markerEnd="url(#court-arrowhead)"
           />
         )}
+        {/* keyboard cursor */}
+        {cursor && interactive && (() => {
+          const { x, y } = toSvg(cursor.u, cursor.v, o)
+          return (
+            <g className="court-cursor" transform={`translate(${x} ${y})`} aria-hidden>
+              <circle r={40} />
+              <line x1={-70} y1={0} x2={70} y2={0} />
+              <line x1={0} y1={-70} x2={0} y2={70} />
+            </g>
+          )
+        })()}
         {/* markers */}
         {markers.map((m, i) => {
           const { x, y } = svgOf(m)

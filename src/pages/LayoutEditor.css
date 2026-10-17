@@ -1,0 +1,303 @@
+/* Layout editor — design tokens only. */
+/* Specificity beats .page-content's own display:flex in app.css. */
+.page-content.layout-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.layout-main,
+.layout-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+}
+@media (min-width: 820px) {
+  .page-content.layout-content {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+  .layout-side {
+    position: sticky;
+    top: 72px;
+  }
+}
+
+/* ---------- reserved-area preview ---------- */
+.layout-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.layout-reserved {
+  position: relative;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface);
+  background-image: repeating-linear-gradient(135deg, transparent 0 10px, var(--surface-2) 10px 20px);
+  overflow: hidden;
+}
+.layout-reserved-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px;
+  padding-right: 150px;
+}
+.layout-reserved-header .logo-wordmark {
+  color: var(--text);
+}
+.layout-preview-set {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-left: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.layout-reserved-court {
+  height: 140px;
+  padding: 8px;
+}
+.layout-reserved-court > .court-wrap {
+  pointer-events: none;
+  opacity: 0.9;
+}
+.layout-reserved-tag {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  max-width: calc(100% - 12px);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--secondary);
+  color: var(--secondary-ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+.layout-reserved-header .layout-reserved-tag {
+  top: 50%;
+  transform: translateY(-50%);
+}
+@media (max-width: 420px) {
+  .layout-reserved-header {
+    padding-right: 10px;
+  }
+  .layout-reserved-header .layout-reserved-tag {
+    position: static;
+    transform: none;
+    order: 10;
+    flex: 0 1 auto;
+    margin-left: 6px;
+  }
+  .layout-preview-set {
+    margin-left: auto;
+  }
+}
+
+/* ---------- editable dock ---------- */
+.layout-dock-wrap {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.layout-dock,
+.layout-dock .btn,
+.layout-dock .layout-grip {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.layout-dock .dock-cell-bg {
+  z-index: 0;
+}
+.layout-cell {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radius-sm);
+  transition: transform 0ms, box-shadow 120ms ease;
+}
+.layout-cell > .btn {
+  cursor: grab;
+  overflow: hidden;
+  gap: 6px;
+}
+.layout-cell > .btn:active {
+  transform: none;
+}
+.layout-cell > .btn .btn-label {
+  font-size: clamp(0.66rem, 2.4vw, 0.9rem);
+}
+.layout-cell {
+  container-type: inline-size;
+}
+/* Narrow cells: stack the icon above a smaller label, then drop the label (same as the tracking page). */
+@container (max-width: 118px) {
+  .layout-cell > .btn {
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 4px;
+  }
+  .layout-cell > .btn .btn-label {
+    font-size: 0.66rem;
+    max-width: 100%;
+    line-height: 1.1;
+  }
+}
+@container (max-width: 60px) {
+  .layout-cell > .btn .btn-label {
+    display: none;
+  }
+}
+.layout-cell.dock-cell-hidden {
+  z-index: 0;
+  opacity: 0.55;
+}
+.layout-cell.dock-cell-hidden > .btn {
+  filter: grayscale(1);
+}
+.layout-cell.is-selected {
+  z-index: 2;
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px var(--primary);
+}
+.layout-cell.is-dragging {
+  z-index: 10;
+  opacity: 0.85;
+  box-shadow: var(--shadow-lg);
+  transition: none;
+}
+.layout-cell.is-dragging > .btn {
+  cursor: grabbing;
+}
+
+.layout-hidden-tag {
+  position: absolute;
+  top: -8px;
+  left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--secondary);
+  color: var(--secondary-ink);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+/* Corner-only hit area: it must not reach the centre of a 2-column button on a phone (~50px wide),
+   where a touch means "move". The inspector's −/+ buttons are the big-target alternative. */
+.layout-grip {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0 6px 6px 0;
+  color: var(--muted);
+  cursor: nwse-resize;
+  z-index: 3;
+  opacity: 0.7;
+}
+.layout-grip svg {
+  display: block;
+  filter: drop-shadow(0 0 1px var(--surface));
+}
+.layout-cell.is-selected .layout-grip,
+.layout-cell:hover .layout-grip {
+  color: var(--primary);
+  opacity: 1;
+}
+.layout-cell > .btn-primary ~ .layout-grip,
+.layout-cell > .btn-secondary ~ .layout-grip {
+  color: var(--surface);
+}
+.layout-cell.is-selected > .btn-primary ~ .layout-grip,
+.layout-cell.is-selected > .btn-secondary ~ .layout-grip {
+  color: var(--surface);
+}
+
+.layout-ghost {
+  z-index: 9;
+  border-radius: var(--radius-sm);
+  border: 2px dashed var(--primary);
+  background: var(--primary-soft);
+  pointer-events: none;
+}
+.layout-ghost.ghost-bad {
+  border-color: var(--danger);
+  background: var(--tertiary-soft);
+  background-image: repeating-linear-gradient(135deg, transparent 0 8px, var(--danger) 8px 9px);
+  opacity: 0.75;
+}
+
+/* ---------- inspector & controls ---------- */
+.layout-inspector .card-title {
+  align-items: flex-start;
+}
+.layout-steppers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.layout-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.layout-stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.layout-stepper-controls > .btn {
+  width: var(--tap);
+  min-width: var(--tap);
+  padding: 0;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+.layout-stepper-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+.layout-empty {
+  padding: 20px 16px;
+}
+.layout-segmented {
+  display: flex;
+  width: 100%;
+}
+.layout-segmented button {
+  flex: 1 1 0;
+  min-height: 40px;
+}
+.layout-size-help {
+  margin-top: 10px;
+}
+.layout-intro,
+.layout-note {
+  line-height: 1.35;
+}

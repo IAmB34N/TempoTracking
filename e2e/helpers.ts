@@ -10,8 +10,15 @@ export async function confirmDialog(page: Page) {
   await expect(dialog).toBeHidden()
 }
 
+/** Read persisted state (the store saves with a short debounce, so wait for it first). */
 export async function readState(page: Page): Promise<any> {
+  await page.waitForTimeout(300)
   return page.evaluate((key) => JSON.parse(localStorage.getItem(key) || 'null'), STORAGE_KEY)
+}
+
+/** Flip a settings toggle: the test id is on the row, the switch is inside it. */
+export async function flipToggle(page: Page, testId: string) {
+  await page.getByTestId(testId).getByRole('switch').click()
 }
 
 /** Add jersey numbers to a position input on the New Game page. */
@@ -40,7 +47,10 @@ export async function createGame(page: Page, nameA = 'Hawks', nameB = 'Tigers') 
   return id
 }
 
-/** Tap the court in Team A's half (left half when horizontal, top half when vertical). */
+/**
+ * Tap the court in Team A's half: keep fx and fy below 0.5 so the point is in the left half
+ * when the court is horizontal and in the top half when it is vertical (phones).
+ */
 export async function tapCourtTeamA(page: Page, fx = 0.3, fy = 0.3) {
   const court = page.getByTestId('track-court').locator('svg')
   await expect(court).toBeVisible()
@@ -55,7 +65,7 @@ export async function option(page: Page, value: string) {
 /** Log one complete set for Team A: setter #7, tempo, outside #12, kill. */
 export async function logKill(page: Page) {
   await tapCourtTeamA(page, 0.3, 0.3)
-  await tapCourtTeamA(page, 0.4, 0.6)
+  await tapCourtTeamA(page, 0.4, 0.4)
   await option(page, 'setter')
   await option(page, '7')
   await option(page, 'tempo')

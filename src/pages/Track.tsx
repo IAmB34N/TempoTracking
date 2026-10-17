@@ -177,13 +177,13 @@ function TrackView({ game }: { game: Game }) {
     const el = dockRef.current
     const root = document.documentElement
     if (!el) return
-    const update = () => root.style.setProperty('--track-toast-offset', `${Math.round(el.getBoundingClientRect().height) + 20}px`)
+    const update = () => root.style.setProperty('--toast-bottom', `${Math.round(el.getBoundingClientRect().height) + 20}px`)
     update()
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null
     ro?.observe(el)
     return () => {
       ro?.disconnect()
-      root.style.removeProperty('--track-toast-offset')
+      root.style.removeProperty('--toast-bottom')
     }
   }, [])
 

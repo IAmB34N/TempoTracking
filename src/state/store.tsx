@@ -138,12 +138,23 @@ export function StoreProvider({ children, initial }: { children: ReactNode; init
       timer.current = null
       saveState({ version: 1, ...latest.current })
     }, 150)
-    return () => {
+    // Flush immediately if the tab is hidden or closed before the debounce fires.
+    const flush = () => {
       if (timer.current !== null) {
         window.clearTimeout(timer.current)
         timer.current = null
         saveState({ version: 1, ...latest.current })
       }
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', flush)
+      flush()
     }
   }, [state])
 

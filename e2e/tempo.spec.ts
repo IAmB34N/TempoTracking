@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { confirmDialog, createGame, logKill, option, readState, tapCourtTeamA } from './helpers'
+import { confirmDialog, createGame, flipToggle, logKill, option, readState, tapCourtTeamA } from './helpers'
 
 test.describe('Tempo', () => {
   test('home shows the brand and disables Resume without games', async ({ page }) => {
@@ -29,7 +29,7 @@ test.describe('Tempo', () => {
     expect(game.plays[0].setFrom.x).toBeLessThan(0.5)
 
     // second set: "other" setter → position → number, bump, middle, blocked
-    await tapCourtTeamA(page, 0.2, 0.5)
+    await tapCourtTeamA(page, 0.2, 0.3)
     await tapCourtTeamA(page, 0.4, 0.2)
     await option(page, 'other')
     await option(page, 'outside')
@@ -41,7 +41,7 @@ test.describe('Tempo', () => {
     await expect(page.getByTestId('flow-panel')).toBeHidden()
 
     // back button inside the flow returns to the previous step
-    await tapCourtTeamA(page, 0.2, 0.5)
+    await tapCourtTeamA(page, 0.2, 0.3)
     await tapCourtTeamA(page, 0.4, 0.2)
     await option(page, 'libero')
     await expect(page.getByTestId('flow-option-3')).toBeVisible()
@@ -84,11 +84,11 @@ test.describe('Tempo', () => {
   test('settings disable steps, hide the set number and toggle dark mode', async ({ page }) => {
     const id = await createGame(page, 'Comets', 'Rockets')
     await page.goto('/#/settings')
-    await page.getByTestId('settings-toggle-setLocation').click()
-    await page.getByTestId('settings-toggle-hitLocation').click()
-    await page.getByTestId('settings-toggle-setHeight').click()
-    await page.getByTestId('settings-show-set').click()
-    await page.getByTestId('settings-dark').click()
+    await flipToggle(page, 'settings-toggle-setLocation')
+    await flipToggle(page, 'settings-toggle-hitLocation')
+    await flipToggle(page, 'settings-toggle-setHeight')
+    await flipToggle(page, 'settings-show-set')
+    await flipToggle(page, 'settings-dark')
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     const state = await readState(page)
     expect(state.settings.steps.setLocation).toBe(false)
@@ -116,7 +116,7 @@ test.describe('Tempo', () => {
     await logKill(page)
     await createGame(page, 'Hawks', 'Comets')
     await logKill(page)
-    await tapCourtTeamA(page, 0.2, 0.5)
+    await tapCourtTeamA(page, 0.2, 0.3)
     await tapCourtTeamA(page, 0.4, 0.2)
     await option(page, 'setter')
     await option(page, '7')

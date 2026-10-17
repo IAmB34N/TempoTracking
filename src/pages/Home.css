@@ -1,0 +1,128 @@
+/* Home. Design tokens only. */
+
+.home {
+  justify-content: center;
+  background:
+    radial-gradient(60% 40% at 50% -10%, var(--primary-soft) 0%, transparent 70%),
+    radial-gradient(40% 30% at 100% 100%, var(--tertiary-soft) 0%, transparent 70%),
+    var(--bg);
+}
+.home-content {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: calc(24px + var(--safe-top)) 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ---------- hero ---------- */
+.home-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px 20px 28px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.home-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--primary) 55%, var(--tertiary) 100%);
+}
+.home-hero::after {
+  content: '';
+  position: absolute;
+  right: -60px;
+  bottom: -90px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--primary-soft) 0%, transparent 70%);
+  pointer-events: none;
+}
+.home-hero .logo {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- action buttons ---------- */
+.home-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.home-btn {
+  justify-content: flex-start;
+  text-align: left;
+  padding: 12px 20px;
+  gap: 14px;
+}
+.home-btn .btn-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  white-space: normal;
+}
+.home-btn-title {
+  line-height: 1.15;
+}
+.home-btn-sub {
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
+  opacity: 0.82;
+}
+.home-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.home-row .btn {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* ---------- primary team chip ---------- */
+.home-primary {
+  display: flex;
+  justify-content: center;
+}
+.home-primary-chip {
+  min-height: var(--tap);
+  padding: 0 16px;
+  text-decoration: none;
+  font-weight: 600;
+}
+.home-primary-chip:hover {
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+.home-primary-chip strong {
+  font-weight: 800;
+}
+
+.home-footer {
+  margin-top: auto;
+  padding: 8px 0 0;
+  text-align: center;
+}
+
+@media (min-width: 720px) {
+  .home-content {
+    padding-top: 48px;
+    gap: 28px;
+  }
+  .home-hero {
+    padding: 48px 32px 36px;
+  }
+}

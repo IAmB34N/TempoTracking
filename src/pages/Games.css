@@ -1,0 +1,82 @@
+/* Previous Games list. Design tokens only. */
+.games-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.games-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 0 0 10px;
+}
+.games-row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 14px 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.games-row-main:hover {
+  background: var(--surface-2);
+}
+.games-row-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  font-size: 1.05rem;
+}
+.games-row-vs {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.games-row-play {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.games-row-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  padding: 0 14px;
+  align-self: flex-start;
+}
+@media (min-width: 720px) {
+  .games-row-actions {
+    /* line up with the title, past the play icon */
+    max-width: 480px;
+    padding-left: 62px;
+  }
+}
+.games-row-actions .btn {
+  min-height: var(--tap);
+  padding: 0 8px;
+}
+.games-row-actions .games-delete {
+  color: var(--danger);
+}
+.games-row-actions .games-delete:hover {
+  border-color: var(--danger);
+}
+.games-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

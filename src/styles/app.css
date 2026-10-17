@@ -9,7 +9,7 @@
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 html {
   -webkit-text-size-adjust: 100%;
@@ -24,7 +24,6 @@ body {
   background: var(--bg);
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
-  overflow-x: hidden;
 }
 h1,
 h2,
@@ -81,7 +80,8 @@ button {
 
 /* ---------- page scaffold ---------- */
 .page {
-  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   padding-bottom: calc(16px + var(--safe-bottom));
@@ -97,6 +97,10 @@ button {
 }
 .page-content-wide {
   max-width: 1200px;
+}
+/* Opt-out for pages that lay out their content as a grid. */
+.page-content.page-content-grid {
+  display: grid;
 }
 .stack {
   display: flex;
@@ -591,7 +595,8 @@ html[data-theme='dark'] .logo-bg {
 .toast-region {
   position: fixed;
   left: 50%;
-  bottom: calc(20px + var(--safe-bottom));
+  /* Pages may set --toast-bottom on <html> to lift toasts above fixed UI (the tracking dock). */
+  bottom: calc(var(--toast-bottom, 20px) + var(--safe-bottom));
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -625,7 +630,8 @@ html[data-theme='dark'] .logo-bg {
 .toast-action {
   border: 0;
   border-radius: 8px;
-  padding: 6px 10px;
+  min-height: 44px;
+  padding: 6px 14px;
   background: var(--primary);
   color: var(--primary-ink);
   font-weight: 800;
@@ -697,6 +703,23 @@ html[data-theme='dark'] .logo-bg {
 }
 .court-interactive {
   cursor: crosshair;
+}
+/* Chrome paints a UA outline on a focused <svg tabindex> after a tap; keep it for keyboard focus only. */
+.court:focus:not(:focus-visible) {
+  outline: none;
+}
+.court-name-dim {
+  opacity: 0.3;
+}
+.court-cursor line {
+  stroke: var(--text);
+  stroke-width: 6;
+  stroke-dasharray: 18 12;
+}
+.court-cursor circle {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 6;
 }
 .court-out {
   fill: var(--court-out);
@@ -866,7 +889,8 @@ html[data-theme='dark'] .logo-bg {
   text-transform: uppercase;
   color: var(--muted);
 }
-.table tr:last-child td {
+.table tr:last-child td,
+.table tr:last-child th {
   border-bottom: 0;
 }
 .stat-tiles {

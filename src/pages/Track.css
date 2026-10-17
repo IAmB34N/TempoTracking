@@ -195,11 +195,6 @@
   border-radius: 12px;
 }
 
-/* Lift toasts above the dock so "Logged · …" never hides the buttons (portrait). */
-.track ~ .toast-region {
-  bottom: calc(var(--track-toast-offset, 20px) + var(--safe-bottom));
-}
-
 /* ---------- dock ---------- */
 .track-dock {
   flex: 0 0 auto;

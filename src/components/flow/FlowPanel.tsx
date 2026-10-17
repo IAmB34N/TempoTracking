@@ -57,7 +57,7 @@ export function FlowPanel({ step, draft, teamNames, numbers, breadcrumb, canBack
     >
       <div className="flow-top">
         {!inline ? (
-          <Button variant="outline" size="md" icon={<IconBack size={20} />} onClick={onBack} disabled={!canBack} aria-label="Back to the previous question" className="flow-nav">
+          <Button variant="outline" size="md" icon={<IconBack size={20} />} onClick={onBack} disabled={!canBack} aria-label="Back to the previous question" className="flow-nav" data-testid="flow-back">
             Back
           </Button>
         ) : (
@@ -67,7 +67,7 @@ export function FlowPanel({ step, draft, teamNames, numbers, breadcrumb, canBack
           {STEP_TITLES[step]}
         </h2>
         {!inline ? (
-          <Button variant="ghost" size="md" icon={<IconClose size={20} />} onClick={onCancel} aria-label="Cancel and discard this set" className="flow-nav">
+          <Button variant="ghost" size="md" icon={<IconClose size={20} />} onClick={onCancel} aria-label="Cancel and discard this set" className="flow-nav" data-testid="flow-cancel">
             Cancel
           </Button>
         ) : (

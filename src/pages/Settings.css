@@ -1,0 +1,66 @@
+/* Settings page — design tokens only. */
+.settings-help {
+  margin-bottom: 4px;
+}
+.settings-note {
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--primary-soft);
+  border-left: 4px solid var(--primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.settings-toggles {
+  margin-top: 4px;
+}
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.settings-segmented {
+  align-self: flex-start;
+}
+.settings-segmented button {
+  min-height: 40px;
+  min-width: 84px;
+}
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.settings-actions > .btn {
+  flex: 1 1 160px;
+}
+.settings-danger {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+}
+.settings-danger > .btn {
+  flex: 1 1 auto;
+}
+.settings-about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.settings-motto {
+  font-size: 1.05rem;
+  max-width: 32ch;
+}
+.settings-version {
+  font-weight: 700;
+  color: var(--muted);
+}
+@media (min-width: 600px) {
+  .settings-actions > .btn,
+  .settings-danger > .btn {
+    flex: 0 1 auto;
+  }
+}

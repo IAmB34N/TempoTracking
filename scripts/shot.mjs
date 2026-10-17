@@ -41,6 +41,11 @@ page.on('console', (m) => {
 })
 await page.goto(url, { waitUntil: 'networkidle' })
 await page.waitForTimeout(300)
+if (full) {
+  const h = await page.evaluate(() => Math.max(document.documentElement.scrollHeight, document.body.scrollHeight))
+  await page.setViewportSize({ width: viewport.width, height: Math.min(Math.max(h, viewport.height), 6000) })
+  await page.waitForTimeout(100)
+}
 await page.screenshot({ path: out, fullPage: full })
 await browser.close()
 console.log('wrote', out, errors.length ? `\nERRORS:\n${errors.join('\n')}` : '')
