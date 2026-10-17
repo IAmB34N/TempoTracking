@@ -91,6 +91,18 @@
   top: 50%;
   transform: translateY(-50%);
 }
+/* Short label in the narrow header strip on phones, full sentence elsewhere. */
+.layout-reserved-tag-short {
+  display: none;
+}
+@media (max-width: 560px) {
+  .layout-reserved-header .layout-reserved-tag-short {
+    display: inline;
+  }
+  .layout-reserved-header .layout-reserved-tag-long {
+    display: none;
+  }
+}
 @media (max-width: 420px) {
   .layout-reserved-header {
     padding-right: 10px;

@@ -364,11 +364,11 @@ export default function LayoutEditor() {
               <LogoMark size={26} />
               <Wordmark height={14} />
               <span className="layout-preview-set">Set 1</span>
-              <span className="layout-reserved-tag">Reserved — buttons can&apos;t go here</span>
+              <span className="layout-reserved-tag"><span className="layout-reserved-tag-short">Reserved</span><span className="layout-reserved-tag-long">Reserved — buttons can&apos;t go here</span></span>
             </div>
             <div className="layout-reserved layout-reserved-court">
               <Court teamNames={['Team A', 'Team B']} swapSides={false} interactive={false} ariaLabel="Court preview" />
-              <span className="layout-reserved-tag">Reserved — buttons can&apos;t go here</span>
+              <span className="layout-reserved-tag"><span className="layout-reserved-tag-short">Reserved</span><span className="layout-reserved-tag-long">Reserved — buttons can&apos;t go here</span></span>
             </div>
           </div>
 
