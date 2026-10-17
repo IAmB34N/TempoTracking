@@ -199,33 +199,28 @@ button {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  color: var(--text);
+}
+.logo-primary {
+  max-width: 100%;
+}
+.logo-primary .logo-wordmark,
+.logo-primary .logo-bolt {
+  max-width: 100%;
+  height: auto;
 }
 .logo-row {
   display: inline-flex;
   align-items: center;
-  gap: 0.35em;
 }
-.logo-word {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text);
-  line-height: 1;
+.logo-wordmark {
+  display: block;
+  color: inherit;
 }
-.logo-sm .logo-word {
-  font-size: 1.1rem;
-}
-.logo-md .logo-word {
-  font-size: 1.6rem;
-}
-.logo-lg .logo-word {
-  font-size: 2.6rem;
-}
-.logo-xl .logo-word {
-  font-size: 3.4rem;
+.logo-bolt {
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(255, 106, 0, 0.25));
 }
 .logo-motto {
   color: var(--muted);
