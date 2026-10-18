@@ -1,4 +1,4 @@
-# Tempo ⚡
+# Tempo
 
 **Tracking the tempo of every set.**
 
